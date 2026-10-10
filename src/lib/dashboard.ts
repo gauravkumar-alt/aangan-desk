@@ -7,9 +7,13 @@ import { vaaniApiConfig } from "./vaani/client";
 import { crmStatus } from "./crm";
 import { webhookSecret } from "./vaani/webhook";
 import { vaaniProvider, webhookToken } from "./vaani/vaanivoice";
+import { seedReplays } from "./replay";
 
 export async function getDashboardData() {
   const store = getStore();
+  // Demo mode on a fresh server (e.g. a new Vercel instance with no database): load September's replay so the
+  // dashboard never shows an empty shell. Real calls are never touched.
+  if (demoMode() && (await store.listEnquiries()).length === 0) await seedReplays();
   const [enquiries, settings, rules] = await Promise.all([store.listEnquiries(), store.getSettings(), loadRuleset()]);
   const secret = webhookSecret();
   return {

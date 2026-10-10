@@ -117,7 +117,11 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
     { scope: root },
   );
 
-  const scoped = useMemo(() => data.enquiries.filter((e) => (source === "real" ? e.source === "vaani" : source === "tests" ? e.source !== "replay" : true)), [data.enquiries, source]);
+  // No real calls yet (e.g. a fresh deployment)? Show the demo data instead of an empty dashboard — and say so.
+  const hasReal = data.enquiries.some((e) => e.source === "vaani");
+  const effective: Source = source === "real" && !hasReal ? "demo" : source;
+  const fallback = effective !== source;
+  const scoped = useMemo(() => data.enquiries.filter((e) => (effective === "real" ? e.source === "vaani" : effective === "tests" ? e.source !== "replay" : true)), [data.enquiries, effective]);
   const m = useMemo(() => computeMetrics(scoped), [scoped]);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -259,13 +263,21 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
                   ["demo", "+ Demo data"],
                 ] as [Source, string][]
               ).map(([k, l]) => (
-                <button key={k} onClick={() => setSource(k)} className={cls("rounded-full px-3.5 py-1 text-[12.5px] font-medium transition", source === k ? "bg-ink text-paper" : "text-ink-2 hover:text-ink")}>
+                <button key={k} onClick={() => setSource(k)} className={cls("rounded-full px-3.5 py-1 text-[12.5px] font-medium transition", effective === k ? "bg-ink text-paper" : "text-ink-2 hover:text-ink")}>
                   {l}
                 </button>
               ))}
             </div>
             <span className="text-[12.5px] text-muted">
-              {source === "real" ? "Only real phone calls answered by the AI." : source === "tests" ? "Includes test calls made from “Test a call”." : "Includes September's 20 transcripts replayed as demo data (pickup times simulated)."}
+              {fallback ? (
+                <span className="font-medium text-warn">No real calls on this server yet, so you&apos;re seeing demo data: September&apos;s 20 calls replayed.</span>
+              ) : source === "real" ? (
+                "Only real phone calls answered by the AI."
+              ) : source === "tests" ? (
+                "Includes test calls made from “Test a call”."
+              ) : (
+                "Includes September's 20 transcripts replayed as demo data (pickup times simulated)."
+              )}
             </span>
           </div>
         </section>
