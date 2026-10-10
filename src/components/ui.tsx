@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Enquiry, HandoffStatus, QualificationStatus } from "@/lib/types";
+import { ThemeToggle } from "./ThemeToggle";
 
 export const cls = (...xs: (string | false | null | undefined)[]) => xs.filter(Boolean).join(" ");
 
@@ -83,7 +84,7 @@ function StatusDot({ s }: { s: SystemsStatus }) {
     <div className="relative">
       <button onClick={() => setOpen((o) => !o)} className="btn !px-3" aria-expanded={open}>
         <span className={cls("h-2 w-2 rounded-full", allOk ? "bg-ok breathe" : "bg-warn")} />
-        {allOk ? "All systems live" : "Check systems"}
+        <span className="hidden md:inline">{allOk ? "All systems live" : "Check systems"}</span>
       </button>
       {open && (
         <div className="card fade-in absolute right-0 z-50 mt-2 w-72 p-3" onMouseLeave={() => setOpen(false)}>
@@ -102,27 +103,28 @@ function StatusDot({ s }: { s: SystemsStatus }) {
 
 export function Header({ active, right, status }: { active: "dashboard" | "call" | "rules"; right?: React.ReactNode; status?: SystemsStatus }) {
   const tab = (href: string, id: string, label: string) => (
-    <Link href={href} className={cls("rounded-full px-3.5 py-1.5 text-[13px] font-medium transition", active === id ? "bg-ink text-paper" : "text-ink-2 hover:bg-white/5 hover:text-ink")}>
+    <Link href={href} className={cls("rounded-full px-3 py-1.5 text-[13px] font-medium whitespace-nowrap transition md:px-3.5", active === id ? "bg-ink text-paper" : "text-ink-2 hover:bg-ink/5 hover:text-ink")}>
       {label}
     </Link>
   );
   return (
-    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-paper/70 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-[1320px] items-center gap-3 px-4 py-3 md:px-6">
+    <header className="sticky top-0 z-40 border-b border-ink/[0.06] bg-paper/70 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-[1320px] items-center gap-2 px-4 py-3 md:gap-3 md:px-6">
         <Link href="/" className="mr-1 flex items-center gap-2.5">
           <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-[#e8885a] to-[#9c4322] text-[16px] font-bold text-white shadow-[0_8px_24px_-8px_rgba(224,120,74,.8)]">आ</span>
-          <span className="hidden leading-tight sm:block">
+          <span className="hidden leading-tight whitespace-nowrap lg:block">
             <span className="font-display block text-[19px] leading-none">Aangan Studio</span>
             <span className="block text-[10.5px] tracking-[0.16em] text-muted uppercase">AI front desk</span>
           </span>
         </Link>
-        <nav className="flex gap-1 rounded-full border border-white/[0.07] bg-white/[0.03] p-1">
+        <nav className="flex gap-1 rounded-full border border-ink/[0.07] bg-ink/[0.03] p-1">
           {tab("/", "dashboard", "Dashboard")}
           {tab("/call", "call", "Test a call")}
           {tab("/rules", "rules", "Rules")}
         </nav>
         <div className="ml-auto flex items-center gap-2">
           {status && <StatusDot s={status} />}
+          <ThemeToggle />
           {right}
         </div>
       </div>

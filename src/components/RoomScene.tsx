@@ -91,16 +91,16 @@ export function RoomScene({ latest, onOpen }: { latest: Enquiry[]; onOpen: (id: 
       <svg viewBox="0 0 600 420" className="absolute inset-0 h-full w-full" aria-hidden>
         <defs>
           <linearGradient id="wallL" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0" stopColor="#3a2f26" />
-            <stop offset="1" stopColor="#241d17" />
+            <stop offset="0" style={{ stopColor: "var(--room-wall-l1)" }} />
+            <stop offset="1" style={{ stopColor: "var(--room-wall-l2)" }} />
           </linearGradient>
           <linearGradient id="wallR" x1="1" x2="0" y1="0" y2="1">
-            <stop offset="0" stopColor="#4a3a2d" />
-            <stop offset="1" stopColor="#2c231b" />
+            <stop offset="0" style={{ stopColor: "var(--room-wall-r1)" }} />
+            <stop offset="1" style={{ stopColor: "var(--room-wall-r2)" }} />
           </linearGradient>
           <linearGradient id="floor" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0" stopColor="#5a4330" />
-            <stop offset="1" stopColor="#2a1f16" />
+            <stop offset="0" style={{ stopColor: "var(--room-floor1)" }} />
+            <stop offset="1" style={{ stopColor: "var(--room-floor2)" }} />
           </linearGradient>
           <linearGradient id="beam" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0" stopColor="#ffd9a8" stopOpacity="0.55" />
@@ -116,7 +116,7 @@ export function RoomScene({ latest, onOpen }: { latest: Enquiry[]; onOpen: (id: 
           </linearGradient>
           <pattern id="planks" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="skewX(-30) rotate(26)">
             <rect width="14" height="14" fill="transparent" />
-            <line x1="0" y1="0" x2="0" y2="14" stroke="#000" strokeOpacity="0.18" strokeWidth="1" />
+            <line x1="0" y1="0" x2="0" y2="14" style={{ stroke: "var(--room-plank)" }} strokeOpacity="0.18" strokeWidth="1" />
           </pattern>
         </defs>
 
@@ -125,7 +125,7 @@ export function RoomScene({ latest, onOpen }: { latest: Enquiry[]; onOpen: (id: 
           <g data-room="floor">
             <polygon points={pts([0, 0, 0], [10, 0, 0], [10, 10, 0], [0, 10, 0])} fill="url(#floor)" />
             <polygon points={pts([0, 0, 0], [10, 0, 0], [10, 10, 0], [0, 10, 0])} fill="url(#planks)" />
-            <polygon points={pts([0, 0, 0], [10, 0, 0], [10, 10, 0], [0, 10, 0])} fill="none" stroke="#f2ebe0" strokeOpacity="0.08" />
+            <polygon points={pts([0, 0, 0], [10, 0, 0], [10, 10, 0], [0, 10, 0])} fill="none" style={{ stroke: "var(--room-edge)" }} strokeOpacity="0.12" />
           </g>
           {/* walls */}
           <g data-room="wall">
@@ -137,7 +137,7 @@ export function RoomScene({ latest, onOpen }: { latest: Enquiry[]; onOpen: (id: 
           <g data-room="wall">
             <polygon points={pts([0, 0, 0], [10, 0, 0], [10, 0, 6.4], [0, 0, 6.4])} fill="url(#wallR)" />
             {/* window */}
-            <polygon points={pts([3.2, 0, 2.2], [7.2, 0, 2.2], [7.2, 0, 5.4], [3.2, 0, 5.4])} fill="#1a2433" />
+            <polygon points={pts([3.2, 0, 2.2], [7.2, 0, 2.2], [7.2, 0, 5.4], [3.2, 0, 5.4])} style={{ fill: "var(--room-window)" }} />
             <polygon points={pts([3.2, 0, 2.2], [7.2, 0, 2.2], [7.2, 0, 5.4], [3.2, 0, 5.4])} fill="none" stroke="#cfa96b" strokeOpacity="0.6" strokeWidth="1.2" />
             <line x1={iso(5.2, 0, 2.2)[0]} y1={iso(5.2, 0, 2.2)[1]} x2={iso(5.2, 0, 5.4)[0]} y2={iso(5.2, 0, 5.4)[1]} stroke="#cfa96b" strokeOpacity="0.5" />
             {/* framed art */}

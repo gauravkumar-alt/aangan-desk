@@ -199,7 +199,7 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
           {tab === "handoff" &&
             (e.handoff.note ? (
               <div className="space-y-3">
-                <div className="rounded-xl bg-[#1d2430] p-3">
+                <div className="rounded-xl bg-info-soft p-3">
                   <div className="mb-1 text-[11px] font-semibold text-info">
                     {e.handoff.status === "SENT" ? `Delivered via ${channelName(e.handoff.channel)} · ${e.handoff.sentAt ? fmtTime(e.handoff.sentAt) : ""}` : "Not delivered yet — shown as it will be sent"}
                   </div>

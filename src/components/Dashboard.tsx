@@ -168,7 +168,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
         {data.rules.warnings.length > 0 && <div className="card mt-4 p-3 text-[13px] text-bad">{data.rules.warnings.join(" · ")}</div>}
 
         {/* ── HERO: the two founder questions + the living room ── */}
-        <section className="blueprint relative mt-4 overflow-hidden rounded-[28px] border border-white/[0.06] px-5 pt-7 pb-4 md:px-9 md:pt-10">
+        <section className="blueprint relative mt-4 overflow-hidden rounded-[28px] border border-ink/[0.06] px-5 pt-7 pb-4 md:px-9 md:pt-10">
           <div className="grid items-center gap-6 lg:grid-cols-[1.05fr_1fr]">
             <div data-reveal>
               <div className="label flex items-center gap-2">
@@ -209,8 +209,8 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
               <RoomScene latest={latest} onOpen={setOpen} />
             </div>
           </div>
-          <div data-reveal className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
-            <div className="flex rounded-full border border-white/[0.08] bg-black/20 p-1">
+          <div data-reveal className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-ink/[0.06] pt-4">
+            <div className="flex rounded-full border border-ink/[0.08] bg-ink/[0.04] p-1">
               {(
                 [
                   ["all", "All calls"],
@@ -283,12 +283,12 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
             </div>
             <div className={cls("grid gap-3", attention.length > 1 && "md:grid-cols-2", attention.length > 2 && "lg:grid-cols-3")}>
               {attention.map((g) => (
-                <div key={g.title} className="rounded-2xl border border-white/[0.06] bg-black/20 p-3">
+                <div key={g.title} className="rounded-2xl border border-ink/[0.06] bg-ink/[0.04] p-3">
                   <div className={cls("mb-2 flex items-center gap-2 text-[12px] font-semibold tracking-[0.08em] uppercase", g.tone)}>
                     <span className={cls("h-1.5 w-1.5 rounded-full", g.dot)} /> {g.title} · {g.items.length}
                   </div>
                   {g.items.slice(0, 4).map((e) => (
-                    <button key={e.id} onClick={() => setOpen(e.id)} className="flex w-full items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-left text-[13px] transition hover:bg-white/5">
+                    <button key={e.id} onClick={() => setOpen(e.id)} className="flex w-full items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-left text-[13px] transition hover:bg-ink/5">
                       <span className="truncate">{e.callerName ?? e.phone ?? "Unknown number"}</span>
                       <span className="shrink-0 text-[11.5px] text-muted">{fmtTime(e.createdAt)}</span>
                     </button>
@@ -302,7 +302,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
 
         {/* ── CALL LOG ── */}
         <section ref={logRef} data-reveal className="card scroll-mt-24 overflow-hidden">
-          <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] p-4 md:p-5">
+          <div className="flex flex-wrap items-center gap-2 border-b border-ink/[0.06] p-4 md:p-5">
             <h2 className="font-display mr-2 text-[26px] leading-none">Call log</h2>
             <input className="input !w-full !rounded-full !py-1.5 md:!w-60" placeholder="Search name, number, place…" value={query} onChange={(e) => setQuery(e.target.value)} />
             <div className="flex flex-wrap gap-1.5">
@@ -318,7 +318,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
                   ["after", "After hours"],
                 ] as [Filter, string][]
               ).map(([k, l]) => (
-                <button key={k} onClick={() => setFilter(k)} className={cls("rounded-full border px-3 py-1 text-[12px] font-medium transition", filter === k ? "border-ink bg-ink text-paper" : "border-white/[0.1] text-ink-2 hover:border-white/25 hover:text-ink")}>
+                <button key={k} onClick={() => setFilter(k)} className={cls("rounded-full border px-3 py-1 text-[12px] font-medium transition", filter === k ? "border-ink bg-ink text-paper" : "border-ink/[0.1] text-ink-2 hover:border-ink/25 hover:text-ink")}>
                   {l}
                 </button>
               ))}
@@ -336,7 +336,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
           </div>
 
           <div className="hidden md:block">
-            <div className="grid grid-cols-[118px_minmax(170px,1.4fr)_minmax(140px,1.2fr)_104px_118px_104px_84px_118px] gap-3 border-b border-white/[0.05] px-5 py-2.5 text-[10.5px] font-semibold tracking-[0.12em] text-muted uppercase">
+            <div className="grid grid-cols-[118px_minmax(170px,1.4fr)_minmax(140px,1.2fr)_104px_118px_104px_84px_118px] gap-3 border-b border-ink/[0.05] px-5 py-2.5 text-[10.5px] font-semibold tracking-[0.12em] text-muted uppercase">
               <SortHead k="time" sort={sort} onSort={toggleSort}>Time</SortHead>
               <SortHead k="caller" sort={sort} onSort={toggleSort}>Caller</SortHead>
               <span>Project</span>
@@ -350,7 +350,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
               <button
                 key={e.id}
                 onClick={() => setOpen(e.id)}
-                className={cls("grid w-full grid-cols-[118px_minmax(170px,1.4fr)_minmax(140px,1.2fr)_104px_118px_104px_84px_118px] items-center gap-3 border-b border-white/[0.04] px-5 py-3 text-left text-[13px] transition hover:bg-white/[0.03]", e.supersededBy && "opacity-45")}
+                className={cls("grid w-full grid-cols-[118px_minmax(170px,1.4fr)_minmax(140px,1.2fr)_104px_118px_104px_84px_118px] items-center gap-3 border-b border-ink/[0.04] px-5 py-3 text-left text-[13px] transition hover:bg-ink/[0.03]", e.supersededBy && "opacity-45")}
               >
                 <span className="min-w-0">
                   <span className="num block">{fmtTime(e.createdAt)}</span>
@@ -375,7 +375,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
             ))}
           </div>
 
-          <div className="divide-y divide-white/[0.05] md:hidden">
+          <div className="divide-y divide-ink/[0.05] md:hidden">
             {rows.map((e) => (
               <button key={e.id} onClick={() => setOpen(e.id)} className={cls("block w-full p-4 text-left", e.supersededBy && "opacity-45")}>
                 <div className="flex items-center justify-between gap-2">
@@ -455,7 +455,7 @@ function Funnel({ m, active, onStep }: { m: ReturnType<typeof computeMetrics>; a
   return (
     <div className="-mx-2 space-y-1">
       {steps.map(([l, v, f], i) => (
-        <button key={l} onClick={() => onStep(f)} className={cls("group block w-full rounded-lg px-2 py-1 text-left transition hover:bg-white/[0.04]", active === f && f !== "all" && "bg-white/[0.06] ring-1 ring-white/10")} title={`Show: ${FILTER_LABEL[f]}`}>
+        <button key={l} onClick={() => onStep(f)} className={cls("group block w-full rounded-lg px-2 py-1 text-left transition hover:bg-ink/[0.04]", active === f && f !== "all" && "bg-ink/[0.06] ring-1 ring-ink/10")} title={`Show: ${FILTER_LABEL[f]}`}>
           <div className="mb-1 flex justify-between text-[12.5px]">
             <span className="text-ink-2">{l}</span>
             <span className="num">
@@ -463,7 +463,7 @@ function Funnel({ m, active, onStep }: { m: ReturnType<typeof computeMetrics>; a
               {i > 0 && steps[i - 1][1] > 0 && <span className="ml-1.5 text-muted">{Math.round((v / steps[i - 1][1]) * 100)}%</span>}
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/[0.05]">
+          <div className="h-2 overflow-hidden rounded-full bg-ink/[0.05]">
             <div
               className="h-2 rounded-full transition-[width] duration-1000"
               style={{ width: `${(v / max) * 100}%`, background: i < 3 ? "linear-gradient(90deg,#6d6253,#c9bfb1)" : i < 5 ? "linear-gradient(90deg,#9c4322,#e0784a)" : "linear-gradient(90deg,#4f6b4d,#9cc49a)" }}

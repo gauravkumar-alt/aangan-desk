@@ -53,7 +53,7 @@ export function TrendChart({ enquiries, selectedDay, onDay, onSeries }: { enquir
     <div ref={ref}>
       <svg viewBox={`0 0 ${W} ${H + 26}`} className="w-full" role="img" aria-label={`Calls over the last 7 days: ${total} in total`}>
         {[0.25, 0.5, 0.75, 1].map((f) => (
-          <line key={f} x1="0" x2={W} y1={y(max * f)} y2={y(max * f)} stroke="#f2ebe0" strokeOpacity="0.06" />
+          <line key={f} x1="0" x2={W} y1={y(max * f)} y2={y(max * f)} style={{ stroke: "var(--color-ink)" }} strokeOpacity="0.07" />
         ))}
         {data.map((d, i) => {
           const x = i * (bw + gap);
@@ -61,27 +61,27 @@ export function TrendChart({ enquiries, selectedDay, onDay, onSeries }: { enquir
           return (
             <g key={d.d} onClick={() => onDay(d.d)} className="cursor-pointer" role="button" aria-label={`Show calls on ${d.label}`}>
               <title>{`${d.label}: ${d.inHours + d.after} calls (${d.after} after hours, ${d.qualified} qualified) — click to see them`}</title>
-              <rect x={x - gap / 2} y="0" width={bw + gap} height={H + 24} fill={sel ? "#e0784a" : "#fff"} fillOpacity={sel ? 0.08 : 0} className="transition hover:fill-opacity-[0.04]" />
-              <rect data-bar x={x} y={y(d.inHours)} width={bw} height={H - y(d.inHours)} rx="6" fill="#f2ebe0" fillOpacity="0.16" />
-              <rect data-bar x={x} y={y(d.inHours + d.after)} width={bw} height={y(d.inHours) - y(d.inHours + d.after)} rx="6" fill="#e0784a" fillOpacity="0.85" />
-              <text x={x + bw / 2} y={H + 18} textAnchor="middle" fontSize="11" fill="#8d8274">
+              <rect x={x - gap / 2} y="0" width={bw + gap} height={H + 24} style={{ fill: sel ? "var(--color-brand)" : "var(--color-ink)" }} fillOpacity={sel ? 0.08 : 0} className="transition hover:fill-opacity-[0.04]" />
+              <rect data-bar x={x} y={y(d.inHours)} width={bw} height={H - y(d.inHours)} rx="6" style={{ fill: "var(--color-ink)" }} fillOpacity="0.16" />
+              <rect data-bar x={x} y={y(d.inHours + d.after)} width={bw} height={y(d.inHours) - y(d.inHours + d.after)} rx="6" style={{ fill: "var(--color-brand)" }} fillOpacity="0.85" />
+              <text x={x + bw / 2} y={H + 18} textAnchor="middle" fontSize="11" style={{ fill: "var(--color-muted)" }}>
                 {d.label}
               </text>
               {d.inHours + d.after > 0 && (
-                <text x={x + bw / 2} y={y(d.inHours + d.after) - 6} textAnchor="middle" fontSize="11" fill="#c9bfb1" className="num">
+                <text x={x + bw / 2} y={y(d.inHours + d.after) - 6} textAnchor="middle" fontSize="11" style={{ fill: "var(--color-ink-2)" }} className="num">
                   {d.inHours + d.after}
                 </text>
               )}
             </g>
           );
         })}
-        <path data-line d={line} fill="none" stroke="#cfa96b" strokeWidth="2" strokeLinejoin="round" />
+        <path data-line d={line} fill="none" style={{ stroke: "var(--color-brass)" }} strokeWidth="2" strokeLinejoin="round" />
         {data.map((d, i) => (
-          <circle key={d.d} cx={i * (bw + gap) + bw / 2} cy={y(d.qualified)} r="3.5" fill="#0e0c0a" stroke="#cfa96b" strokeWidth="2" />
+          <circle key={d.d} cx={i * (bw + gap) + bw / 2} cy={y(d.qualified)} r="3.5" style={{ fill: "var(--color-paper)", stroke: "var(--color-brass)" }} strokeWidth="2" />
         ))}
       </svg>
       <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-ink-2">
-        <button className="link-stat inline-flex items-center gap-1.5" onClick={() => onSeries("inhours")}><span className="h-2.5 w-2.5 rounded-sm bg-[#f2ebe0]/25" />In studio hours</button>
+        <button className="link-stat inline-flex items-center gap-1.5" onClick={() => onSeries("inhours")}><span className="h-2.5 w-2.5 rounded-sm bg-ink/25" />In studio hours</button>
         <button className="link-stat inline-flex items-center gap-1.5" onClick={() => onSeries("after")}><span className="h-2.5 w-2.5 rounded-sm bg-brand" />After hours — answered by AI</button>
         <button className="link-stat inline-flex items-center gap-1.5" onClick={() => onSeries("QUALIFIED")}><span className="h-0.5 w-4 bg-brass" />Qualified</button>
       </div>
