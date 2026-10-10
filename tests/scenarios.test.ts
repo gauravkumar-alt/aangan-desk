@@ -560,3 +560,15 @@ describe("identity question", () => {
     expect(conv.replies[0]).toMatch(/virtual assistant — an AI/);
   });
 });
+
+describe("misheard localities", () => {
+  it("maps speech-to-text garbles to the right Pune locality", async () => {
+    const { findLocalities } = await import("../src/lib/localities");
+    expect(findLocalities("The location is Hinduwari")[0]?.name).toBe("Hinjewadi");
+    expect(findLocalities("At Sanhinjawari")[0]?.name).toBe("Hinjewadi");
+    expect(findLocalities("I live in Kotrud")[0]?.name).toBe("Kothrud");
+    expect(findLocalities("we're in Pimple Saudagr")[0]?.name).toBe("Pimple Saudagar");
+    expect(findLocalities("I'm looking to design my house").length).toBe(0); // no false positives on ordinary words
+    expect(findLocalities("whole whole home please, within two months").length).toBe(0);
+  });
+});

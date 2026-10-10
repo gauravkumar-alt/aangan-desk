@@ -60,5 +60,49 @@ export function findLocalities(text: string): LocalityMatch[] {
   // First place mentioned wins: "3BHK in Kothrud — Dahanukar Colony" → Kothrud
   const hits: LocalityMatch[] = found.sort((a, b) => a.at - b.at).map(({ name, region }) => ({ name, region }));
   const specific = hits.filter((h) => h.name.toLowerCase() !== "pune");
-  return specific.length ? specific : hits;
+  if (specific.length) return specific;
+  const fuzzy = fuzzyLocality(t);
+  return fuzzy ? [fuzzy] : hits;
+}
+
+// Speech-to-text garbles: "Hinduwari", "Sanhinjawari" → Hinjewadi. Known garbles first, then edit distance.
+const ALIASES: Record<string, string> = { hinduwari: "hinjewadi", hinjawari: "hinjewadi", hinjewari: "hinjewadi", hinjvadi: "hinjewadi", kotrud: "kothrud", vimannagar: "viman nagar", kalyaninagar: "kalyani nagar", koregaon: "koregaon park", magarpatta: "magarpatta", pimplesaudagar: "pimple saudagar", wakkad: "wakad", baaner: "baner", undhri: "undri", kharadhi: "kharadi" };
+
+function lev(a: string, b: string) {
+  const dp = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j];
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[b.length];
+}
+
+function fuzzyLocality(t: string): LocalityMatch | null {
+  const raw = t.trim().split(" ");
+  // single words, plus adjacent pairs joined ("pimple saudagr" → "pimplesaudagr") for two-word places
+  const words = [...raw, ...raw.slice(1).map((w, i) => raw[i] + w)].filter((w) => w.length >= 5);
+  const byName = new Map(ALL.map((l) => [l.name, l]));
+  for (const w of words) {
+    const alias = ALIASES[w] ?? Object.entries(ALIASES).find(([k]) => w.endsWith(k) && w.length - k.length <= 3)?.[1];
+    if (alias && byName.get(alias)) return { name: titleCase(alias), region: byName.get(alias)!.region };
+  }
+  let best: { l: LocalityMatch; d: number } | null = null;
+  for (const w of words) {
+    for (const l of ALL) {
+      const n = l.name.replace(/\s+/g, "");
+      if (n.length < 6 || l.region === "outside") continue;
+      // compare against same-length windows too, so a stray prefix ("san" + hinjawari) doesn't hide the match
+      for (let len = n.length - 1; len <= n.length + 1; len++)
+        for (let i = 0; i + len <= w.length; i++) {
+          const d = lev(w.slice(i, i + len), n);
+          if (d <= (n.length >= 8 ? 2 : 1) && (!best || d < best.d)) best = { l: { name: titleCase(l.name), region: l.region }, d };
+        }
+    }
+  }
+  return best?.l ?? null;
 }

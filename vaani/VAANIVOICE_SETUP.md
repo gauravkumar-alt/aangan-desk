@@ -1,7 +1,7 @@
 # Setting up the Aangan agent on VaaniVoice (app.vaanivoice.ai)
 
 1. **Agents → Create agent**: name "Aangan Front Desk", language English (India).
-2. **Persona / Instructions**: paste `vaani/agent-prompt.md` (the section from "Your job" down).
+2. **Persona / Instructions**: paste `vaani/system-prompt-v3.txt` (the live prompt; earlier versions are kept for reference).
    **Greeting**: "Good morning, Aangan Studio. I'm the studio's virtual assistant. How can I help you today?"
 3. **Knowledge Base**: upload `case/services.md`, `case/qualified.md` and `case/pricing.md`, and attach the KB to the agent.
 4. **Analysis (post-call) tab**: paste `vaani/entities-prompt.txt` as the entity-extraction prompt.
