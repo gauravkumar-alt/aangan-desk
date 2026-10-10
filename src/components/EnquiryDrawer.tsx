@@ -105,7 +105,7 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
             {e.qualificationStatus === "NEEDS_REVIEW" && e.intent !== "existing_client" && !e.review && (
               <>
                 <button className="btn btn-primary" disabled={!!busy} onClick={() => patch("approve", { review: { decision: "approved" } })}>
-                  Approve & send to designer
+                  Send to designer
                 </button>
                 <button className="btn" disabled={!!busy} onClick={() => patch("close", { review: { decision: "closed" } })}>
                   Close
@@ -160,8 +160,8 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
           {/* Pricing (internal) */}
           <div className="card p-4">
             <div className="mb-1 flex items-center gap-2">
-              <span className="font-semibold">Indicative pricing</span>
-              <Badge tone="bg-info-soft text-info">INTERNAL — NEVER QUOTED TO CALLER</Badge>
+              <span className="font-semibold">Rough project size</span>
+              <Badge tone="bg-info-soft text-info">INTERNAL · NEVER TOLD TO THE CALLER</Badge>
             </div>
             {e.pricing.status === "estimated" && e.indicativePriceMin != null ? (
               <>
@@ -186,7 +186,7 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
             {(
               [
                 ["handoff", e.handoff.kind === "escalation" ? "Escalation note" : "Designer handoff"],
-                ["checks", "Qualification checks"],
+                ["checks", "Why this result"],
                 ["transcript", `Transcript${e.transcriptStatus !== "complete" ? ` (${e.transcriptStatus.replace("_", " ")})` : ""}`],
               ] as const
             ).map(([k, l]) => (

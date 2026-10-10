@@ -14,9 +14,9 @@ export const fmtLakh = (n: number) => (n >= 1e7 ? `₹${+(n / 1e7).toFixed(2)} C
 export const pct = (x: number | null) => (x == null ? "—" : `${Math.round(x * 100)}%`);
 
 const Q: Record<QualificationStatus, [string, string]> = {
-  QUALIFIED: ["QUALIFIED", "bg-ok-soft text-ok ring-ok/25"],
-  NOT_QUALIFIED: ["NOT QUALIFIED", "bg-bad-soft text-bad ring-bad/25"],
-  NEEDS_REVIEW: ["NEEDS REVIEW", "bg-warn-soft text-warn ring-warn/25"],
+  QUALIFIED: ["GOOD FIT", "bg-ok-soft text-ok ring-ok/25"],
+  NOT_QUALIFIED: ["NOT A FIT", "bg-bad-soft text-bad ring-bad/25"],
+  NEEDS_REVIEW: ["CHECK THIS", "bg-warn-soft text-warn ring-warn/25"],
   PENDING: ["NOT ASSESSED", "bg-line-2 text-ink-2 ring-line"],
 };
 
@@ -37,13 +37,13 @@ export function HandoffBadge({ e, compact }: { e: Pick<Enquiry, "handoff">; comp
   if (s === "SENT")
     return (
       <span className="inline-flex flex-col items-start gap-0.5">
-        <Badge tone="bg-ok-soft text-ok ring-ok/25">HANDOFF SENT</Badge>
+        <Badge tone="bg-ok-soft text-ok ring-ok/25">SENT</Badge>
         {!compact && <span className="text-[11px] text-muted">{channelName(e.handoff.channel)}</span>}
       </span>
     );
   return (
     <span className="inline-flex flex-col items-start gap-0.5">
-      <Badge tone="bg-warn-soft text-warn ring-warn/25">HANDOFF PENDING</Badge>
+      <Badge tone="bg-warn-soft text-warn ring-warn/25">NOT SENT YET</Badge>
       {!compact && e.handoff.lastError && <span className="max-w-[160px] truncate text-[11px] text-bad" title={e.handoff.lastError}>{e.handoff.lastError}</span>}
     </span>
   );

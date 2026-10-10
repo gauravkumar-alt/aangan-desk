@@ -8,19 +8,21 @@ import { EnquiryDrawer } from "./EnquiryDrawer";
 import { RoomScene } from "./RoomScene";
 import { SettingsPanel } from "./SettingsPanel";
 import { TrendChart } from "./TrendChart";
+import { ReviewMode } from "./ReviewMode";
 import { canAnimate, finishAfter } from "./motion";
 import { cls, fmtDur, fmtInr, fmtLakh, fmtTime, HandoffBadge, Header, pct, projectText, QualBadge, sourceLabel } from "./ui";
 
 gsap.registerPlugin(useGSAP);
 
-type Source = "all" | "live" | "replay";
+type Source = "real" | "tests" | "demo";
+const SOURCE_KEY = "aangan-source";
 type Filter = "all" | "QUALIFIED" | "NEEDS_REVIEW" | "NOT_QUALIFIED" | "pending" | "missed" | "after" | "inhours" | "answered" | "completed" | "handoff" | "booked" | "won" | "escalation" | "priced";
 type SortKey = "time" | "caller" | "value" | "duration";
 
 const FILTER_LABEL: Record<Filter, string> = {
-  all: "All calls", QUALIFIED: "Qualified", NEEDS_REVIEW: "Needs review", NOT_QUALIFIED: "Not a fit", pending: "Handoff pending", missed: "Missed calls",
+  all: "All calls", QUALIFIED: "Good fit", NEEDS_REVIEW: "Check this one", NOT_QUALIFIED: "Not a fit", pending: "Handoff pending", missed: "Missed calls",
   after: "After hours", inhours: "In studio hours", answered: "Answered", completed: "Completed calls", handoff: "Handed to a designer",
-  booked: "Consultation booked", won: "Projects won", escalation: "Client escalations", priced: "Qualified & priced (pipeline)",
+  booked: "Consultation booked", won: "Projects won", escalation: "Client escalations", priced: "Good fits with a rough size",
 };
 const istDay = (iso: string) => new Date(Date.parse(iso) + 330 * 60_000).toISOString().slice(0, 10);
 
@@ -52,7 +54,33 @@ function CountUp({ value, format = intFmt }: { value: number; format?: (n: numbe
 
 export function Dashboard({ initial, openId }: { initial: DashboardData; openId?: string }) {
   const [data, setData] = useState(initial);
-  const [source, setSource] = useState<Source>("all");
+  const [source, setSourceState] = useState<Source>("real");
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(SOURCE_KEY) as Source | null;
+      if (v === "real" || v === "tests" || v === "demo") setSourceState(v);
+    } catch {}
+  }, []);
+  const setSource = (v: Source) => {
+    setSourceState(v);
+    try {
+      localStorage.setItem(SOURCE_KEY, v);
+    } catch {}
+  };
+  const [tipSeen, setTipSeen] = useState(true);
+  useEffect(() => {
+    try {
+      setTipSeen(localStorage.getItem("aangan-tip") === "1");
+    } catch {}
+  }, []);
+  const dismissTip = () => {
+    setTipSeen(true);
+    try {
+      localStorage.setItem("aangan-tip", "1");
+    } catch {}
+  };
+  const [reviewing, setReviewing] = useState(false);
+  const paused = useRef(false); // no auto-refresh while someone is reading or reviewing
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
   const [day, setDay] = useState<string | null>(null);
@@ -76,7 +104,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
     if (r.ok) setData(await r.json());
   }, []);
   useEffect(() => {
-    const t = setInterval(refresh, 5000);
+    const t = setInterval(() => !paused.current && refresh(), 5000);
     return () => clearInterval(t);
   }, [refresh]);
 
@@ -89,7 +117,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
     { scope: root },
   );
 
-  const scoped = useMemo(() => data.enquiries.filter((e) => (source === "all" ? true : source === "replay" ? e.source === "replay" : e.source !== "replay")), [data.enquiries, source]);
+  const scoped = useMemo(() => data.enquiries.filter((e) => (source === "real" ? e.source === "vaani" : source === "tests" ? e.source !== "replay" : true)), [data.enquiries, source]);
   const m = useMemo(() => computeMetrics(scoped), [scoped]);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -120,10 +148,11 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
   const pending = scoped.filter((e) => e.handoff.status === "PENDING" || e.crm?.status === "PENDING");
   const attention = [
     { title: "Call back", tone: "text-bad", dot: "bg-bad", items: m.callbacksNeeded },
-    { title: "Handoff or CRM pending", tone: "text-warn", dot: "bg-warn", items: pending },
-    { title: "Needs review", tone: "text-warn", dot: "bg-warn", items: reviewQueue },
+    { title: "Not sent yet", tone: "text-warn", dot: "bg-warn", items: pending },
+    { title: "Check these", tone: "text-warn", dot: "bg-warn", items: reviewQueue },
   ].filter((g) => g.items.length);
   const selected = data.enquiries.find((e) => e.id === open) ?? null;
+  paused.current = Boolean(open || reviewing || settingsOpen);
   const it = data.integrations;
   const within5 = m.incoming ? m.answeredWithin5 / m.incoming : null;
   const latest = useMemo(() => {
@@ -167,6 +196,18 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
       <main className="mx-auto max-w-[1320px] space-y-6 px-4 pb-12 md:px-6">
         {data.rules.warnings.length > 0 && <div className="card mt-4 p-3 text-[13px] text-bad">{data.rules.warnings.join(" · ")}</div>}
 
+        {!tipSeen && (
+          <div className="card mt-4 flex items-center gap-3 px-4 py-3 text-[13.5px]">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-soft text-brand">↓</span>
+            <span className="flex-1">
+              <b>Tip:</b> tap any number, chart bar or card to see exactly those calls. Tap a call to open it.
+            </span>
+            <button className="btn" onClick={dismissTip}>
+              Got it
+            </button>
+          </div>
+        )}
+
         {/* ── HERO: the two founder questions + the living room ── */}
         <section className="blueprint relative mt-4 overflow-hidden rounded-[28px] border border-ink/[0.06] px-5 pt-7 pb-4 md:px-9 md:pt-10">
           <div className="grid items-center gap-6 lg:grid-cols-[1.05fr_1fr]">
@@ -190,7 +231,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
                   </div>
                 </button>
                 <button onClick={() => focus("handoff")} className="card lift p-4 text-left md:p-5" title="Click to see the enquiries handed to designers">
-                  <div className="label">Qualified → designer</div>
+                  <div className="label">Good fits → designer</div>
                   <div className="font-display mt-1 text-[48px] leading-none md:text-[60px]">
                     <CountUp value={m.handoffsSent} />
                     <span className="text-[28px] text-muted md:text-[34px]">/{m.qualified}</span>
@@ -201,7 +242,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
               <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-ink-2">
                 <button className="link-stat" onClick={() => focus("after")}><b className="num text-ink">{m.afterHours}</b> after hours ({pct(m.incoming ? m.afterHours / m.incoming : null)})</button>
                 <button className="link-stat" onClick={() => focus("NOT_QUALIFIED")}><b className="num text-ink">{m.notQualified}</b> closed politely</button>
-                <button className="link-stat" onClick={() => focus("NEEDS_REVIEW")}><b className="num text-ink">{m.needsReview}</b> to review</button>
+                <button className="link-stat" onClick={() => focus("NEEDS_REVIEW")}><b className="num text-ink">{m.needsReview}</b> to check</button>
                 {m.escalations > 0 && <button className="link-stat" onClick={() => focus("escalation")}><b className="num text-ink">{m.escalations}</b> client escalation</button>}
               </div>
             </div>
@@ -213,9 +254,9 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
             <div className="flex rounded-full border border-ink/[0.08] bg-ink/[0.04] p-1">
               {(
                 [
-                  ["all", "All calls"],
-                  ["live", "Live & test"],
-                  ["replay", "Sep 2026 replay"],
+                  ["real", "Real calls"],
+                  ["tests", "+ Test calls"],
+                  ["demo", "+ Demo data"],
                 ] as [Source, string][]
               ).map(([k, l]) => (
                 <button key={k} onClick={() => setSource(k)} className={cls("rounded-full px-3.5 py-1 text-[12.5px] font-medium transition", source === k ? "bg-ink text-paper" : "text-ink-2 hover:text-ink")}>
@@ -223,13 +264,15 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
                 </button>
               ))}
             </div>
-            {source !== "live" && <span className="text-[12px] text-muted">Replay = September&apos;s 20 real phone transcripts run through this system · pickup times simulated</span>}
+            <span className="text-[12.5px] text-muted">
+              {source === "real" ? "Only real phone calls answered by the AI." : source === "tests" ? "Includes test calls made from “Test a call”." : "Includes September's 20 transcripts replayed as demo data (pickup times simulated)."}
+            </span>
           </div>
         </section>
 
         {/* ── MONEY STRIP ── */}
         <section data-reveal className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Tile label="Estimated pipeline" hint={METRIC_DEFINITIONS.pipeline} accent onClick={() => focus("priced")}>
+          <Tile label="Possible project value" hint={METRIC_DEFINITIONS.pipeline} accent onClick={() => focus("priced")}>
             {m.pipelinePriced ? (
               <>
                 <CountUp value={m.pipelineMinInr} format={(n) => fmtLakh(n)} />
@@ -239,13 +282,13 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
             ) : (
               "—"
             )}
-            <Sub>{m.pipelinePriced} priced · estimate, not revenue</Sub>
+            <Sub>rough estimate from the pricing guide · not revenue</Sub>
           </Tile>
-          <Tile label="AI operating cost" hint={`${METRIC_DEFINITIONS.aiCost} Click to change the rate.`} onClick={() => setSettingsOpen(true)}>
+          <Tile label="AI cost so far" hint={`${METRIC_DEFINITIONS.aiCost} Click to change the rate.`} onClick={() => setSettingsOpen(true)}>
             <CountUp value={m.aiCostInr} format={(n) => fmtInr(Math.round(n))} />
             <Sub>{m.totalMinutes} min · ₹{data.settings.vaaniRatePerMinInr + data.settings.telephonyPerMinInr}/min</Sub>
           </Tile>
-          <Tile label="Cost per qualified lead" hint={`${METRIC_DEFINITIONS.costPerQualified} Click to see qualified enquiries.`} onClick={() => focus("QUALIFIED")}>
+          <Tile label="Cost per good lead" hint={`${METRIC_DEFINITIONS.costPerQualified} Click to see the good fits.`} onClick={() => focus("QUALIFIED")}>
             {m.costPerQualifiedInr != null ? <CountUp value={m.costPerQualifiedInr} format={(n) => fmtInr(Math.round(n))} /> : "—"}
             <Sub>{m.costPerEnquiryInr != null ? `${fmtInr(Math.round(m.costPerEnquiryInr))} per enquiry` : "no enquiries yet"}</Sub>
           </Tile>
@@ -275,11 +318,18 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
           <section data-reveal className="card p-5 md:p-6">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <h2 className="font-display text-[26px] leading-none">Needs you</h2>
-              {pending.length > 0 && (
-                <button className="btn btn-brand" disabled={busy} onClick={retryAll}>
-                  {busy ? "Retrying…" : "Retry pending"}
-                </button>
-              )}
+              <div className="flex flex-wrap gap-2">
+                {reviewQueue.length > 0 && (
+                  <button className="btn btn-brand" onClick={() => setReviewing(true)}>
+                    Check {reviewQueue.length} one by one →
+                  </button>
+                )}
+                {pending.length > 0 && (
+                  <button className="btn" disabled={busy} onClick={retryAll}>
+                    {busy ? "Retrying…" : "Retry sending"}
+                  </button>
+                )}
+              </div>
             </div>
             <div className={cls("grid gap-3", attention.length > 1 && "md:grid-cols-2", attention.length > 2 && "lg:grid-cols-3")}>
               {attention.map((g) => (
@@ -309,8 +359,8 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
               {(
                 [
                   ["all", "All"],
-                  ["QUALIFIED", "Qualified"],
-                  ["NEEDS_REVIEW", "Review"],
+                  ["QUALIFIED", "Good fit"],
+                  ["NEEDS_REVIEW", "Check"],
                   ["NOT_QUALIFIED", "Not a fit"],
                   ["handoff", "Handed over"],
                   ["pending", "Pending"],
@@ -336,15 +386,15 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
           </div>
 
           <div className="hidden md:block">
-            <div className="grid grid-cols-[118px_minmax(170px,1.4fr)_minmax(140px,1.2fr)_104px_118px_104px_84px_118px] gap-3 border-b border-ink/[0.05] px-5 py-2.5 text-[10.5px] font-semibold tracking-[0.12em] text-muted uppercase">
+            <div className="grid grid-cols-[118px_minmax(170px,1.4fr)_minmax(140px,1.2fr)_104px_118px_104px_84px_118px] gap-3 border-b border-ink/[0.05] px-5 py-2.5 text-[11.5px] font-semibold tracking-[0.1em] text-muted uppercase">
               <SortHead k="time" sort={sort} onSort={toggleSort}>Time</SortHead>
               <SortHead k="caller" sort={sort} onSort={toggleSort}>Caller</SortHead>
               <span>Project</span>
               <span>Location</span>
-              <span>Status</span>
-              <SortHead k="value" sort={sort} onSort={toggleSort}>Indicative</SortHead>
-              <SortHead k="duration" sort={sort} onSort={toggleSort}>Call · AI</SortHead>
-              <span>Handoff</span>
+              <span>Result</span>
+              <SortHead k="value" sort={sort} onSort={toggleSort}>Rough size</SortHead>
+              <SortHead k="duration" sort={sort} onSort={toggleSort}>Length · cost</SortHead>
+              <span>Designer</span>
             </div>
             {rows.map((e) => (
               <button
@@ -354,7 +404,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
               >
                 <span className="min-w-0">
                   <span className="num block">{fmtTime(e.createdAt)}</span>
-                  <span className="block truncate text-[11px] text-muted">{sourceLabel(e.source)}{e.afterHours ? " · after hrs" : ""}</span>
+                  <span className="block truncate text-[12px] text-muted">{sourceLabel(e.source)}{e.afterHours ? " · after hrs" : ""}</span>
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{e.callerName ?? (e.phone ? "Caller" : "Unknown caller")}</span>
@@ -392,7 +442,11 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
           </div>
           {!rows.length && (
             <div className="px-5 py-14 text-center text-muted">
-              Nothing here yet. <a className="font-medium text-brand underline-offset-4 hover:underline" href="/call">Make a test call</a>.
+              {source === "real" && !scoped.length ? (
+                <>No real calls yet. Call the Aangan number, or <button className="font-medium text-brand underline-offset-4 hover:underline" onClick={() => setSource("demo")}>show the demo data</button>.</>
+              ) : (
+                <>No calls match. <button className="font-medium text-brand underline-offset-4 hover:underline" onClick={() => { setFilter("all"); setDay(null); setQuery(""); }}>Clear filters</button>.</>
+              )}
             </div>
           )}
         </section>
@@ -405,6 +459,19 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
 
       {selected && <EnquiryDrawer e={selected} all={data.enquiries} calendlyUrl={it.calendlyUrl} onClose={() => setOpen(null)} onChanged={refresh} onOpen={setOpen} />}
       {settingsOpen && <SettingsPanel data={data} onClose={() => setSettingsOpen(false)} onChanged={refresh} />}
+      {reviewing && (
+        <ReviewMode
+          queue={reviewQueue}
+          onDone={() => {
+            setReviewing(false);
+            refresh();
+          }}
+          onOpenFull={(id) => {
+            setReviewing(false);
+            setOpen(id);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -414,7 +481,7 @@ function Tile({ label, hint, accent, onClick, children }: { label: string; hint?
     <button onClick={onClick} className={cls("card lift group p-4 text-left md:p-5", accent && "card-glow")} title={hint}>
       <div className="label flex items-center justify-between">
         {label}
-        <span className="text-muted opacity-0 transition group-hover:opacity-100">→</span>
+        <span className="text-muted opacity-50 transition group-hover:translate-x-0.5 group-hover:opacity-100">→</span>
       </div>
       <div className="font-display mt-2 flex flex-wrap items-baseline gap-x-1 text-[30px] leading-none md:text-[36px]">{children}</div>
     </button>
@@ -446,8 +513,8 @@ function Funnel({ m, active, onStep }: { m: ReturnType<typeof computeMetrics>; a
     ["Incoming calls", m.incoming, "all"],
     ["Answered", m.answered, "answered"],
     ["Completed", m.completed, "completed"],
-    ["Qualified", m.qualified, "QUALIFIED"],
-    ["Designer handoff", m.handoffsSent, "handoff"],
+    ["Good fit", m.qualified, "QUALIFIED"],
+    ["Sent to a designer", m.handoffsSent, "handoff"],
     ["Consultation booked", m.consultationsBooked, "booked"],
     ["Project won", m.won, "won"],
   ];

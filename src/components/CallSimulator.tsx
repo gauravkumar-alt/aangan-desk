@@ -441,31 +441,34 @@ export function CallSimulator({ rules, demo }: { rules: Ruleset; demo: boolean }
               {phase === "posting" && <div className="text-muted">Delivering the webhook…</div>}
               {result && (
                 <ol className="space-y-2">
-                  <Step ok={result.delivery.status === 200} title={`Webhook delivered to /api/vaani/webhook → HTTP ${result.delivery.status}`}>
-                    Call <code>{result.callId}</code> · authenticated: <span className="break-all">{result.delivery.signature?.startsWith("sha256=") ? `${result.delivery.signature.slice(0, 22)}… (HMAC-SHA256)` : result.delivery.signature}</span>
+                  <Step ok={result.delivery.status === 200} title={result.delivery.status === 200 ? "Call received by Aangan" : `Call couldn’t be received (error ${result.delivery.status})`}>
+                    <details className="text-[12px] text-muted">
+                      <summary className="cursor-pointer">technical details</summary>
+                      Call <code>{result.callId}</code> · webhook HTTP {result.delivery.status} · authenticated: <span className="break-all">{result.delivery.signature?.startsWith("sha256=") ? `${result.delivery.signature.slice(0, 22)}… (HMAC-SHA256)` : result.delivery.signature}</span>
+                    </details>
                   </Step>
                   {enquiry && (
                     <>
-                      <Step ok title="Enquiry stored before anything else">
+                      <Step ok title="Saved to the dashboard">
                         <a className="font-semibold text-brand underline" href={`/?enquiry=${enquiry.id}`}>
                           Open in dashboard →
                         </a>
                       </Step>
-                      <Step ok={enquiry.transcriptStatus === "complete"} warn={enquiry.transcriptStatus === "pending_fetch"} title={`Transcript: ${enquiry.transcriptStatus.replace("_", " ")}`}>
+                      <Step ok={enquiry.transcriptStatus === "complete"} warn={enquiry.transcriptStatus === "pending_fetch"} title={enquiry.transcriptStatus === "complete" ? "Conversation transcript saved" : enquiry.transcriptStatus === "fetch_failed" ? "Transcript not available yet" : "Fetching the transcript…"}>
                         {enquiry.transcriptStatus === "fetch_failed" ? "Fetch failed — the enquiry was qualified from the webhook's extracted entities and can be re-fetched later." : "From the webhook, or the call-details API when it lagged"}
                       </Step>
-                      <Step ok title="Qualification">
+                      <Step ok title="Result">
                         <span className="inline-flex flex-wrap items-center gap-2">
                           <QualBadge e={enquiry} /> {enquiry.qualificationReason}
                         </span>
                       </Step>
-                      <Step ok={enquiry.handoff.status !== "PENDING"} warn={enquiry.handoff.status === "PENDING"} title="Designer handoff">
+                      <Step ok={enquiry.handoff.status !== "PENDING"} warn={enquiry.handoff.status === "PENDING"} title="Designer">
                         <span className="inline-flex flex-wrap items-center gap-2">
                           <HandoffBadge e={enquiry} />
                           {enquiry.handoff.status === "NOT_REQUIRED" && <span className="text-muted">Not forwarded.</span>}
                         </span>
                       </Step>
-                      <Step ok title={`AI cost: ${fmtInr(enquiry.aiCost)}`}>
+                      <Step ok title={`This call cost about ${fmtInr(enquiry.aiCost)}`}>
                         {enquiry.cost.note}
                       </Step>
                     </>

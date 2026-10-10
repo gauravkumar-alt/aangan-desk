@@ -87,7 +87,7 @@ export function RoomScene({ latest, onOpen }: { latest: Enquiry[]; onOpen: (id: 
   const pos = ["left-0 top-[3%]", "right-0 top-[8%]", "right-[1%] bottom-[3%]"];
 
   return (
-    <div ref={root} className="relative h-[360px] w-full select-none md:h-[420px]" style={{ perspective: 900 }}>
+    <div ref={root} className="relative h-[260px] w-full select-none sm:h-[340px] md:h-[420px]" style={{ perspective: 900 }}>
       <svg viewBox="0 0 600 420" className="absolute inset-0 h-full w-full" aria-hidden>
         <defs>
           <linearGradient id="wallL" x1="0" x2="1" y1="0" y2="1">

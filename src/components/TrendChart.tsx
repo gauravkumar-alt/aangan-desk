@@ -59,7 +59,7 @@ export function TrendChart({ enquiries, selectedDay, onDay, onSeries }: { enquir
           const x = i * (bw + gap);
           const sel = selectedDay === d.d;
           return (
-            <g key={d.d} onClick={() => onDay(d.d)} className="cursor-pointer" role="button" aria-label={`Show calls on ${d.label}`}>
+            <g key={d.d} onClick={() => onDay(d.d)} onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && (ev.preventDefault(), onDay(d.d))} tabIndex={0} className="cursor-pointer outline-none focus-visible:[&>rect:first-of-type]:fill-opacity-[0.12]" role="button" aria-label={`Show calls on ${d.label}`}>
               <title>{`${d.label}: ${d.inHours + d.after} calls (${d.after} after hours, ${d.qualified} qualified) — click to see them`}</title>
               <rect x={x - gap / 2} y="0" width={bw + gap} height={H + 24} style={{ fill: sel ? "var(--color-brand)" : "var(--color-ink)" }} fillOpacity={sel ? 0.08 : 0} className="transition hover:fill-opacity-[0.04]" />
               <rect data-bar x={x} y={y(d.inHours)} width={bw} height={H - y(d.inHours)} rx="6" style={{ fill: "var(--color-ink)" }} fillOpacity="0.16" />

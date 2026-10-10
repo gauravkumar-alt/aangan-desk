@@ -62,8 +62,9 @@ export function SettingsPanel({ data, onClose, onChanged }: { data: DashboardDat
         </section>
 
         {it.demo && (
-          <section className="card space-y-3 p-4">
-            <div className="font-semibold">Demo controls</div>
+          <details className="card space-y-3 p-4">
+            <summary className="cursor-pointer font-semibold">Demo tools <span className="font-normal text-muted">— for demos only</span></summary>
+            <p className="rounded-lg bg-warn-soft px-3 py-2 text-[12.5px] text-warn">These change what the live dashboard shows and how handoffs behave. Leave them alone on the real system.</p>
             <Toggle label="Simulate Telegram / handoff failure" on={s.simulateHandoffFailure} onChange={(v) => put({ simulateHandoffFailure: v }, v ? "Handoffs will now fail and stay PENDING." : "Handoffs back to normal. Use Retry to send pending ones.")} />
             <Toggle label="Simulate Vaani API failure (transcript fetch)" on={s.simulateVaaniApiFailure} onChange={(v) => put({ simulateVaaniApiFailure: v }, v ? "Transcript fetches will now fail." : "Vaani API back to normal.")} />
             <div className="flex flex-wrap gap-2 pt-1">
@@ -77,7 +78,7 @@ export function SettingsPanel({ data, onClose, onChanged }: { data: DashboardDat
                 Clear test calls
               </button>
             </div>
-          </section>
+          </details>
         )}
       </aside>
     </div>
