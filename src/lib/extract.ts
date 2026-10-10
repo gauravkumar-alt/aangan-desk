@@ -23,7 +23,7 @@ export type Slot =
   | "anythingElse"
   | null;
 
-export type BasicQuestion = "service_area" | "consultation" | "lead_time" | "hours" | "rented" | "services";
+export type BasicQuestion = "service_area" | "consultation" | "lead_time" | "hours" | "rented" | "services" | "identity";
 
 export interface Extraction {
   facts: Partial<EnquiryFacts>;
@@ -402,6 +402,7 @@ export function extract(text: string, ctx: { lastAsked: Slot; now: Date }): Extr
   if (/(timings|what are your hours|when are you open|office hours|working hours)/.test(low)) questions.push("hours");
   if (/(rented|renting|tenant).*\?|can you (still )?(take|do).*(rent)/.test(low)) questions.push("rented");
   if (/(what (all )?do you do|what services|do you (do|take up|handle|design) )/.test(low)) questions.push("services");
+  if (/(are you (a |an )?(robot|bot|human|real|ai|person|machine|computer)|who are you|what are you|am i (talking|speaking) to a (robot|bot|machine|person|human))/.test(low)) questions.push("identity");
 
   // intent
   if (/((my|our) designer\b.{0,40}(hasn't|has not|not|isn't|didn't|no)|existing project|ongoing project|my project (has been|is) (going|running|delayed)|you('re| are) (doing|working on) (my|our)|complaint|not (getting )?(a )?(reply|response) from (my|our) designer)/.test(low)) facts.intent = "existing_client";

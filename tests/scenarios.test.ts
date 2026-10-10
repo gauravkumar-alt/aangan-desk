@@ -553,3 +553,10 @@ describe("off-topic and prank questions", () => {
     expect(conv.replies.at(-1)).toMatch(/Goodbye!$/);
   });
 });
+
+describe("identity question", () => {
+  it("answers 'are you a robot?' honestly", () => {
+    const conv = talk(["Are you a robot?"]);
+    expect(conv.replies[0]).toMatch(/virtual assistant — an AI/);
+  });
+});

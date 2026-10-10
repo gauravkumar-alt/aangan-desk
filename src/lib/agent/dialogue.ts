@@ -161,6 +161,7 @@ function answerBasics(qs: string[], rules: Ruleset): string[] {
   if (qs.includes("hours")) out.push(`The studio is in from ${fmt12(svc.hours.open)} to ${fmt12(svc.hours.close)}, but I'm here any time.`);
   if (qs.includes("rented")) out.push("Yes — a rented home is fine, as long as there are no structural changes.");
   if (qs.includes("services")) out.push("We do end-to-end interiors for homes and small commercial spaces like offices and clinics — design and execution together.");
+  if (qs.includes("identity")) out.push("I'm Aangan Studio's virtual assistant — an AI that takes enquiries so a designer can call you back with everything already noted.");
   if (qs.includes("consultation")) out.push("Your designer will go through everything with you at the consultation.");
   return out;
 }
