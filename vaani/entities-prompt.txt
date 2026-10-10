@@ -1,0 +1,26 @@
+Extract these fields from the call. Use exactly these names. If the caller did not say something, return null, never guess.
+
+caller_name: the caller's name.
+intent: "new_project", "existing_client" (calling about a project Aangan is already doing), or "other".
+project_type: one of residential, office, clinic, studio, hospitality, retail, fitness, other_commercial.
+property_type: e.g. "3BHK apartment", "villa", "independent house", "office".
+location: the locality, e.g. "Kothrud", "Wakad".
+location_status: "in_area" only if the caller confirmed it is in Pune city or PCMC, "outside" if they said it is not, else null.
+area_sqft: approximate carpet area as a number, or "min-max" if they gave a range.
+spaces: list of rooms or spaces they want done.
+scope: "full" (whole home or full fit-out), "partial" (some rooms), or "advisory" (advice, decor, styling, furniture-only or Vastu-only).
+project_stage: e.g. "new possession", "lived-in", "bare shell", "possession in 6 weeks".
+ownership: "owner", "rented", or "family" (calling for a family member).
+decision_maker: "yes" (caller decides), "authorised" (calling for someone who asked them to go ahead), "family_attending" (researching for family who will attend), or "no".
+structural_changes: true if they want walls moved or structural work, else false or null.
+timeline: when they need it complete, in their words.
+timeline_deadline: the completion date as YYYY-MM-DD if they gave one.
+later_start_ok: true or false, their answer to whether a later completion date works.
+budget: only if the caller volunteered it, in their words. Never infer.
+exploring: true if they are only exploring or not ready yet.
+referral: how they heard of Aangan.
+requirements: style or special needs in their words.
+constraints: e.g. "landlord has agreed".
+unknown_fields: list of field names the caller said they did not know.
+declined_fields: list of field names the caller preferred not to share.
+call_ended_early: true if the call ended before the agent finished.

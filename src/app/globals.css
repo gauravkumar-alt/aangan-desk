@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --color-paper: #f7f5f1;
+  --color-surface: #ffffff;
+  --color-ink: #1c1b19;
+  --color-ink-2: #4a4741;
+  --color-muted: #8b867d;
+  --color-line: #e7e2d9;
+  --color-line-2: #f1ede6;
+  --color-brand: #b4532a;
+  --color-brand-soft: #f8e9e1;
+
+  --color-ok: #1f7a4d;
+  --color-ok-soft: #e4f3ea;
+  --color-bad: #b23b3b;
+  --color-bad-soft: #fbe8e8;
+  --color-warn: #9a6200;
+  --color-warn-soft: #fbf0d9;
+  --color-info: #3b5bb2;
+  --color-info-soft: #e8edfb;
+}
+
+html { background: var(--color-paper); color: var(--color-ink); -webkit-font-smoothing: antialiased; }
+body { background: var(--color-paper); min-height: 100vh; }
+.num { font-variant-numeric: tabular-nums; }
+.card { background: var(--color-surface); border: 1px solid var(--color-line); border-radius: 14px; }
+.btn { display: inline-flex; align-items: center; gap: 6px; border-radius: 9px; padding: 7px 12px; font-size: 13px; font-weight: 600; border: 1px solid var(--color-line); background: var(--color-surface); color: var(--color-ink); transition: background .15s, border-color .15s; white-space: nowrap; }
+.btn:hover { background: var(--color-line-2); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--color-ink); color: #fff; border-color: var(--color-ink); }
+.btn-primary:hover { background: #33312d; }
+.btn-brand { background: var(--color-brand); color: #fff; border-color: var(--color-brand); }
+.btn-brand:hover { background: #9c4622; }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--color-muted); }
+.input { border: 1px solid var(--color-line); border-radius: 9px; padding: 8px 10px; font-size: 14px; background: #fff; width: 100%; }
+.input:focus { outline: 2px solid var(--color-brand-soft); border-color: var(--color-brand); }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgb(180 83 42 / .45); } 100% { box-shadow: 0 0 0 18px rgb(180 83 42 / 0); } }
+.ringing { animation: pulse-ring 1.1s infinite; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: fade-in .25s ease-out; }

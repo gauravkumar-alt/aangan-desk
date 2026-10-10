@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "aangan-desk-dev", "runtimeExecutable": "bash", "runtimeArgs": ["run-dev.sh"], "port": 3200 }
+  ]
+}
