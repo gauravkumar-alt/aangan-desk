@@ -42,7 +42,7 @@ function arch(cy: number, z0: number, z1: number, w: number) {
   return pts(...p);
 }
 
-export function RoomScene({ latest }: { latest: Enquiry[] }) {
+export function RoomScene({ latest, onOpen }: { latest: Enquiry[]; onOpen: (id: string) => void }) {
   const root = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -183,7 +183,7 @@ export function RoomScene({ latest }: { latest: Enquiry[] }) {
       {/* floating enquiry cards */}
       <div data-depth="3" className="pointer-events-none absolute inset-0">
         {cards.map((e, i) => (
-          <div key={e.id} data-card className={cls("card card-glow absolute w-[176px] p-2.5 md:w-[190px]", pos[i])} style={{ transformStyle: "preserve-3d" }}>
+          <button key={e.id} data-card onClick={() => onOpen(e.id)} title={`Open ${e.callerName ?? "this enquiry"}`} className={cls("card card-glow lift pointer-events-auto absolute w-[176px] p-2.5 text-left md:w-[190px]", pos[i])} style={{ transformStyle: "preserve-3d" }}>
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-[13px] font-medium">{e.callerName ?? "New caller"}</span>
               <span className={cls("h-1.5 w-1.5 shrink-0 rounded-full", e.qualificationStatus === "QUALIFIED" ? "bg-ok" : e.qualificationStatus === "NOT_QUALIFIED" ? "bg-bad" : "bg-warn")} />
@@ -193,7 +193,7 @@ export function RoomScene({ latest }: { latest: Enquiry[] }) {
               <span className="truncate">{e.location?.split(",")[0] ?? "—"}</span>
               <span className="font-mono">{e.qualificationStatus === "QUALIFIED" ? "→ designer" : e.qualificationStatus === "NEEDS_REVIEW" ? "review" : "closed"}</span>
             </div>
-          </div>
+          </button>
         ))}
       </div>
       <div className="pointer-events-none absolute bottom-[4%] left-0 flex items-center gap-2 text-[10.5px] tracking-[0.14em] text-muted uppercase">

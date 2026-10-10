@@ -14,7 +14,15 @@ import { cls, fmtDur, fmtInr, fmtLakh, fmtTime, HandoffBadge, Header, pct, proje
 gsap.registerPlugin(useGSAP);
 
 type Source = "all" | "live" | "replay";
-type Filter = "all" | "QUALIFIED" | "NEEDS_REVIEW" | "NOT_QUALIFIED" | "pending" | "missed" | "after";
+type Filter = "all" | "QUALIFIED" | "NEEDS_REVIEW" | "NOT_QUALIFIED" | "pending" | "missed" | "after" | "inhours" | "answered" | "completed" | "handoff" | "booked" | "won" | "escalation" | "priced";
+type SortKey = "time" | "caller" | "value" | "duration";
+
+const FILTER_LABEL: Record<Filter, string> = {
+  all: "All calls", QUALIFIED: "Qualified", NEEDS_REVIEW: "Needs review", NOT_QUALIFIED: "Not a fit", pending: "Handoff pending", missed: "Missed calls",
+  after: "After hours", inhours: "In studio hours", answered: "Answered", completed: "Completed calls", handoff: "Handed to a designer",
+  booked: "Consultation booked", won: "Projects won", escalation: "Client escalations", priced: "Qualified & priced (pipeline)",
+};
+const istDay = (iso: string) => new Date(Date.parse(iso) + 330 * 60_000).toISOString().slice(0, 10);
 
 const intFmt = (n: number) => Math.round(n).toLocaleString("en-IN");
 
@@ -47,6 +55,17 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
   const [source, setSource] = useState<Source>("all");
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+  const [day, setDay] = useState<string | null>(null);
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: "time", dir: -1 });
+  const logRef = useRef<HTMLElement>(null);
+  /** Every clickable number lands here: set the filter, then glide to the call log. */
+  const focus = useCallback((f: Filter, d: string | null = null) => {
+    setFilter(f);
+    setDay(d);
+    setQuery("");
+    requestAnimationFrame(() => logRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, []);
+  const toggleSort = (key: SortKey) => setSort((s) => ({ key, dir: s.key === key ? ((-s.dir) as 1 | -1) : key === "caller" ? 1 : -1 }));
   const [open, setOpen] = useState<string | null>(openId ?? null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -74,15 +93,29 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
   const m = useMemo(() => computeMetrics(scoped), [scoped]);
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return scoped.filter((e) => {
+    const out = scoped.filter((e) => {
       if (q && ![e.callerName, e.phone, e.location, projectText(e)].some((v) => v?.toLowerCase().includes(q))) return false;
-      if (filter === "all") return true;
-      if (filter === "pending") return e.handoff.status === "PENDING";
-      if (filter === "missed") return e.callStatus === "missed" || e.callStatus === "failed";
-      if (filter === "after") return e.afterHours;
-      return e.qualificationStatus === filter && e.intent !== "existing_client" && !e.supersededBy;
+      if (day && istDay(e.createdAt) !== day) return false;
+      switch (filter) {
+        case "all": return true;
+        case "pending": return e.handoff.status === "PENDING" || e.crm?.status === "PENDING";
+        case "missed": return e.callStatus === "missed" || e.callStatus === "failed";
+        case "after": return e.afterHours;
+        case "inhours": return !e.afterHours;
+        case "answered": return e.callStatus === "completed" || e.callStatus === "hung_up_early";
+        case "completed": return e.callStatus === "completed";
+        case "handoff": return e.handoff.kind === "designer" && e.handoff.status === "SENT";
+        case "booked": return e.consultation?.status === "booked";
+        case "won": return e.outcome.status === "won";
+        case "escalation": return e.intent === "existing_client";
+        case "priced": return e.qualificationStatus === "QUALIFIED" && e.pricing.status === "estimated" && !e.supersededBy;
+        default: return e.qualificationStatus === filter && e.intent !== "existing_client" && !e.supersededBy;
+      }
     });
-  }, [scoped, filter, query]);
+    const val = (e: (typeof out)[number]) =>
+      sort.key === "time" ? Date.parse(e.createdAt) : sort.key === "caller" ? (e.callerName ?? "~").toLowerCase() : sort.key === "value" ? e.indicativePriceMin ?? -1 : e.callDurationSeconds;
+    return [...out].sort((a, b) => (val(a) > val(b) ? 1 : val(a) < val(b) ? -1 : 0) * sort.dir);
+  }, [scoped, filter, query, day, sort]);
   const reviewQueue = scoped.filter((e) => e.qualificationStatus === "NEEDS_REVIEW" && !e.supersededBy && e.intent !== "existing_client" && e.callStatus !== "missed");
   const pending = scoped.filter((e) => e.handoff.status === "PENDING" || e.crm?.status === "PENDING");
   const attention = [
@@ -147,7 +180,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
                 The right ones, <em className="whitespace-nowrap text-brass">handed over.</em>
               </h1>
               <div className="mt-7 grid grid-cols-2 gap-4 md:max-w-[560px]">
-                <div className="card p-4 md:p-5" title={METRIC_DEFINITIONS.answeredWithin5}>
+                <button onClick={() => focus(m.missed ? "missed" : "answered")} className="card lift p-4 text-left md:p-5" title={`${METRIC_DEFINITIONS.answeredWithin5} — click to see ${m.missed ? "the missed calls" : "answered calls"}`}>
                   <div className="label">Answered within 5 min</div>
                   <div className="font-display mt-1 text-[48px] leading-none md:text-[60px]">
                     {within5 == null ? "—" : <CountUp value={within5 * 100} format={(n) => `${Math.round(n)}%`} />}
@@ -155,25 +188,25 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
                   <div className="mt-2 text-[12.5px] text-ink-2">
                     of {m.incoming} calls{m.medianAnswerSec != null && <> · picked up in ~{m.medianAnswerSec}s</>}
                   </div>
-                </div>
-                <div className="card p-4 md:p-5">
+                </button>
+                <button onClick={() => focus("handoff")} className="card lift p-4 text-left md:p-5" title="Click to see the enquiries handed to designers">
                   <div className="label">Qualified → designer</div>
                   <div className="font-display mt-1 text-[48px] leading-none md:text-[60px]">
                     <CountUp value={m.handoffsSent} />
                     <span className="text-[28px] text-muted md:text-[34px]">/{m.qualified}</span>
                   </div>
                   <div className="mt-2 text-[12.5px] text-ink-2">{m.medianHandoffSec != null ? <>briefed ~{Math.round(m.medianHandoffSec)}s after the call</> : <>with everything already asked</>}</div>
-                </div>
+                </button>
               </div>
               <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-ink-2">
-                <span><b className="num text-ink">{m.afterHours}</b> after hours ({pct(m.incoming ? m.afterHours / m.incoming : null)})</span>
-                <span><b className="num text-ink">{m.notQualified}</b> closed politely</span>
-                <span><b className="num text-ink">{m.needsReview}</b> to review</span>
-                {m.escalations > 0 && <span><b className="num text-ink">{m.escalations}</b> client escalation</span>}
+                <button className="link-stat" onClick={() => focus("after")}><b className="num text-ink">{m.afterHours}</b> after hours ({pct(m.incoming ? m.afterHours / m.incoming : null)})</button>
+                <button className="link-stat" onClick={() => focus("NOT_QUALIFIED")}><b className="num text-ink">{m.notQualified}</b> closed politely</button>
+                <button className="link-stat" onClick={() => focus("NEEDS_REVIEW")}><b className="num text-ink">{m.needsReview}</b> to review</button>
+                {m.escalations > 0 && <button className="link-stat" onClick={() => focus("escalation")}><b className="num text-ink">{m.escalations}</b> client escalation</button>}
               </div>
             </div>
             <div data-reveal className="relative -mx-2 lg:mx-0">
-              <RoomScene latest={latest} />
+              <RoomScene latest={latest} onOpen={setOpen} />
             </div>
           </div>
           <div data-reveal className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-4">
@@ -196,7 +229,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
 
         {/* ── MONEY STRIP ── */}
         <section data-reveal className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Tile label="Estimated pipeline" hint={METRIC_DEFINITIONS.pipeline} accent>
+          <Tile label="Estimated pipeline" hint={METRIC_DEFINITIONS.pipeline} accent onClick={() => focus("priced")}>
             {m.pipelinePriced ? (
               <>
                 <CountUp value={m.pipelineMinInr} format={(n) => fmtLakh(n)} />
@@ -208,15 +241,15 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
             )}
             <Sub>{m.pipelinePriced} priced · estimate, not revenue</Sub>
           </Tile>
-          <Tile label="AI operating cost" hint={METRIC_DEFINITIONS.aiCost}>
+          <Tile label="AI operating cost" hint={`${METRIC_DEFINITIONS.aiCost} Click to change the rate.`} onClick={() => setSettingsOpen(true)}>
             <CountUp value={m.aiCostInr} format={(n) => fmtInr(Math.round(n))} />
             <Sub>{m.totalMinutes} min · ₹{data.settings.vaaniRatePerMinInr + data.settings.telephonyPerMinInr}/min</Sub>
           </Tile>
-          <Tile label="Cost per qualified lead" hint={METRIC_DEFINITIONS.costPerQualified}>
+          <Tile label="Cost per qualified lead" hint={`${METRIC_DEFINITIONS.costPerQualified} Click to see qualified enquiries.`} onClick={() => focus("QUALIFIED")}>
             {m.costPerQualifiedInr != null ? <CountUp value={m.costPerQualifiedInr} format={(n) => fmtInr(Math.round(n))} /> : "—"}
             <Sub>{m.costPerEnquiryInr != null ? `${fmtInr(Math.round(m.costPerEnquiryInr))} per enquiry` : "no enquiries yet"}</Sub>
           </Tile>
-          <Tile label="Won projects" hint={METRIC_DEFINITIONS.conversion}>
+          <Tile label="Won projects" hint={METRIC_DEFINITIONS.conversion} onClick={() => focus(m.won ? "won" : "handoff")}>
             {m.won ? <CountUp value={m.wonValueInr} format={(n) => fmtLakh(n)} /> : <span className="text-muted">—</span>}
             <Sub>{m.outcomesRecorded ? `${m.won} won · ${pct(m.conversionRate)} conversion` : `${m.consultationsBooked} consultations booked · no outcomes yet`}</Sub>
           </Tile>
@@ -229,11 +262,11 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
               <h2 className="font-display text-[26px] leading-none">Last 7 days</h2>
               <span className="label">calls per day</span>
             </div>
-            <TrendChart enquiries={scoped} />
+            <TrendChart enquiries={scoped} selectedDay={day} onDay={(d) => focus("all", d)} onSeries={(f) => focus(f)} />
           </div>
           <div data-reveal className="card p-5 md:p-6">
             <h2 className="font-display mb-4 text-[26px] leading-none">From ring to project</h2>
-            <Funnel m={m} />
+            <Funnel m={m} active={filter} onStep={focus} />
           </div>
         </section>
 
@@ -268,7 +301,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
         )}
 
         {/* ── CALL LOG ── */}
-        <section data-reveal className="card overflow-hidden">
+        <section ref={logRef} data-reveal className="card scroll-mt-24 overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.06] p-4 md:p-5">
             <h2 className="font-display mr-2 text-[26px] leading-none">Call log</h2>
             <input className="input !w-full !rounded-full !py-1.5 md:!w-60" placeholder="Search name, number, place…" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -279,6 +312,7 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
                   ["QUALIFIED", "Qualified"],
                   ["NEEDS_REVIEW", "Review"],
                   ["NOT_QUALIFIED", "Not a fit"],
+                  ["handoff", "Handed over"],
                   ["pending", "Pending"],
                   ["missed", "Missed"],
                   ["after", "After hours"],
@@ -290,17 +324,26 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
               ))}
             </div>
             <span className="ml-auto text-[12px] text-muted">{rows.length} calls</span>
+            {(filter !== "all" || day || query) && (
+              <div className="flex w-full flex-wrap items-center gap-2 pt-1 text-[12.5px]">
+                <span className="text-muted">Showing:</span>
+                {filter !== "all" && <Chip onClear={() => setFilter("all")}>{FILTER_LABEL[filter]}</Chip>}
+                {day && <Chip onClear={() => setDay(null)}>{new Date(`${day}T12:00:00Z`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</Chip>}
+                {query && <Chip onClear={() => setQuery("")}>“{query}”</Chip>}
+                <button className="text-muted underline-offset-4 hover:text-ink hover:underline" onClick={() => { setFilter("all"); setDay(null); setQuery(""); }}>Clear all</button>
+              </div>
+            )}
           </div>
 
           <div className="hidden md:block">
             <div className="grid grid-cols-[118px_minmax(170px,1.4fr)_minmax(140px,1.2fr)_104px_118px_104px_84px_118px] gap-3 border-b border-white/[0.05] px-5 py-2.5 text-[10.5px] font-semibold tracking-[0.12em] text-muted uppercase">
-              <span>Time</span>
-              <span>Caller</span>
+              <SortHead k="time" sort={sort} onSort={toggleSort}>Time</SortHead>
+              <SortHead k="caller" sort={sort} onSort={toggleSort}>Caller</SortHead>
               <span>Project</span>
               <span>Location</span>
               <span>Status</span>
-              <span>Indicative</span>
-              <span>Call · AI</span>
+              <SortHead k="value" sort={sort} onSort={toggleSort}>Indicative</SortHead>
+              <SortHead k="duration" sort={sort} onSort={toggleSort}>Call · AI</SortHead>
               <span>Handoff</span>
             </div>
             {rows.map((e) => (
@@ -354,7 +397,10 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
           )}
         </section>
 
-        <footer className="pt-2 text-center text-[12px] text-muted">Phone enquiries only · WhatsApp and web form out of scope · updated {fmtTime(data.generatedAt)}</footer>
+        <footer className="pt-2 text-center text-[12px] text-muted">
+          Phone enquiries only · WhatsApp and web form out of scope ·{" "}
+          <button className="underline-offset-4 hover:text-ink hover:underline" onClick={refresh} title="Refresh now">updated {fmtTime(data.generatedAt)} ↻</button>
+        </footer>
       </main>
 
       {selected && <EnquiryDrawer e={selected} all={data.enquiries} calendlyUrl={it.calendlyUrl} onClose={() => setOpen(null)} onChanged={refresh} onOpen={setOpen} />}
@@ -363,31 +409,53 @@ export function Dashboard({ initial, openId }: { initial: DashboardData; openId?
   );
 }
 
-function Tile({ label, hint, accent, children }: { label: string; hint?: string; accent?: boolean; children: React.ReactNode }) {
+function Tile({ label, hint, accent, onClick, children }: { label: string; hint?: string; accent?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <div className={cls("card p-4 md:p-5", accent && "card-glow")} title={hint}>
-      <div className="label">{label}</div>
+    <button onClick={onClick} className={cls("card lift group p-4 text-left md:p-5", accent && "card-glow")} title={hint}>
+      <div className="label flex items-center justify-between">
+        {label}
+        <span className="text-muted opacity-0 transition group-hover:opacity-100">→</span>
+      </div>
       <div className="font-display mt-2 flex flex-wrap items-baseline gap-x-1 text-[30px] leading-none md:text-[36px]">{children}</div>
-    </div>
+    </button>
   );
 }
+function Chip({ children, onClear }: { children: React.ReactNode; onClear: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/40 bg-brand-soft px-2.5 py-0.5 text-ink">
+      {children}
+      <button onClick={onClear} className="text-muted hover:text-ink" aria-label="Remove filter">✕</button>
+    </span>
+  );
+}
+
+function SortHead({ k, sort, onSort, children }: { k: SortKey; sort: { key: SortKey; dir: 1 | -1 }; onSort: (k: SortKey) => void; children: React.ReactNode }) {
+  const on = sort.key === k;
+  return (
+    <button onClick={() => onSort(k)} className={cls("flex items-center gap-1 text-left uppercase tracking-[0.12em] transition hover:text-ink", on && "text-ink")}>
+      {children}
+      <span className={cls("text-[9px]", !on && "opacity-30")}>{on && sort.dir === 1 ? "▲" : "▼"}</span>
+    </button>
+  );
+}
+
 const Sub = ({ children }: { children: React.ReactNode }) => <div className="mt-2 w-full font-sans text-[12px] leading-snug text-muted">{children}</div>;
 
-function Funnel({ m }: { m: ReturnType<typeof computeMetrics> }) {
-  const steps: [string, number][] = [
-    ["Incoming calls", m.incoming],
-    ["Answered", m.answered],
-    ["Completed", m.completed],
-    ["Qualified", m.qualified],
-    ["Designer handoff", m.handoffsSent],
-    ["Consultation booked", m.consultationsBooked],
-    ["Project won", m.won],
+function Funnel({ m, active, onStep }: { m: ReturnType<typeof computeMetrics>; active: Filter; onStep: (f: Filter) => void }) {
+  const steps: [string, number, Filter][] = [
+    ["Incoming calls", m.incoming, "all"],
+    ["Answered", m.answered, "answered"],
+    ["Completed", m.completed, "completed"],
+    ["Qualified", m.qualified, "QUALIFIED"],
+    ["Designer handoff", m.handoffsSent, "handoff"],
+    ["Consultation booked", m.consultationsBooked, "booked"],
+    ["Project won", m.won, "won"],
   ];
   const max = Math.max(1, m.incoming);
   return (
-    <div className="space-y-2.5">
-      {steps.map(([l, v], i) => (
-        <div key={l}>
+    <div className="-mx-2 space-y-1">
+      {steps.map(([l, v, f], i) => (
+        <button key={l} onClick={() => onStep(f)} className={cls("group block w-full rounded-lg px-2 py-1 text-left transition hover:bg-white/[0.04]", active === f && f !== "all" && "bg-white/[0.06] ring-1 ring-white/10")} title={`Show: ${FILTER_LABEL[f]}`}>
           <div className="mb-1 flex justify-between text-[12.5px]">
             <span className="text-ink-2">{l}</span>
             <span className="num">
@@ -401,9 +469,9 @@ function Funnel({ m }: { m: ReturnType<typeof computeMetrics> }) {
               style={{ width: `${(v / max) * 100}%`, background: i < 3 ? "linear-gradient(90deg,#6d6253,#c9bfb1)" : i < 5 ? "linear-gradient(90deg,#9c4322,#e0784a)" : "linear-gradient(90deg,#4f6b4d,#9cc49a)" }}
             />
           </div>
-        </div>
+        </button>
       ))}
-      <div className="pt-1 text-[11.5px] text-muted">Bookings and wins are entered by the studio — never assumed.</div>
+      <div className="px-2 pt-1 text-[11.5px] text-muted">Bookings and wins are entered by the studio — never assumed.</div>
     </div>
   );
 }

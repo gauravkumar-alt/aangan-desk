@@ -68,6 +68,13 @@ body::after {
 }
 
 @layer components {
+/* anything clickable lifts a little and gets a warm edge */
+.lift { cursor: pointer; transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .25s, box-shadow .25s; }
+.lift:hover { transform: translateY(-2px); border-color: rgb(224 120 74 / 0.35); box-shadow: 0 1px 0 rgb(255 255 255 / .05) inset, 0 28px 60px -28px rgb(224 120 74 / 0.35); }
+.lift:focus-visible, .link-stat:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 3px; }
+.link-stat { cursor: pointer; border-radius: 8px; padding: 2px 4px; margin: -2px -4px; transition: background .2s, color .2s; }
+.link-stat:hover { background: rgb(242 235 224 / 0.06); color: var(--color-ink); }
+
 /* glass panels */
 .card {
   position: relative;

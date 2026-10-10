@@ -10,7 +10,7 @@ import { canAnimate } from "./motion";
 
 const day = (d: Date) => new Date(d.getTime() + 330 * 60_000).toISOString().slice(0, 10); // IST date
 
-export function TrendChart({ enquiries }: { enquiries: Enquiry[] }) {
+export function TrendChart({ enquiries, selectedDay, onDay, onSeries }: { enquiries: Enquiry[]; selectedDay: string | null; onDay: (d: string) => void; onSeries: (f: "inhours" | "after" | "QUALIFIED") => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const data = useMemo(() => {
     const latest = enquiries.length ? new Date(Math.max(...enquiries.map((e) => Date.parse(e.createdAt)))) : new Date();
@@ -57,8 +57,11 @@ export function TrendChart({ enquiries }: { enquiries: Enquiry[] }) {
         ))}
         {data.map((d, i) => {
           const x = i * (bw + gap);
+          const sel = selectedDay === d.d;
           return (
-            <g key={d.d}>
+            <g key={d.d} onClick={() => onDay(d.d)} className="cursor-pointer" role="button" aria-label={`Show calls on ${d.label}`}>
+              <title>{`${d.label}: ${d.inHours + d.after} calls (${d.after} after hours, ${d.qualified} qualified) — click to see them`}</title>
+              <rect x={x - gap / 2} y="0" width={bw + gap} height={H + 24} fill={sel ? "#e0784a" : "#fff"} fillOpacity={sel ? 0.08 : 0} className="transition hover:fill-opacity-[0.04]" />
               <rect data-bar x={x} y={y(d.inHours)} width={bw} height={H - y(d.inHours)} rx="6" fill="#f2ebe0" fillOpacity="0.16" />
               <rect data-bar x={x} y={y(d.inHours + d.after)} width={bw} height={y(d.inHours) - y(d.inHours + d.after)} rx="6" fill="#e0784a" fillOpacity="0.85" />
               <text x={x + bw / 2} y={H + 18} textAnchor="middle" fontSize="11" fill="#8d8274">
@@ -78,9 +81,9 @@ export function TrendChart({ enquiries }: { enquiries: Enquiry[] }) {
         ))}
       </svg>
       <div className="mt-2 flex flex-wrap gap-4 text-[12px] text-ink-2">
-        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-[#f2ebe0]/25" />In studio hours</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-brand" />After hours — answered by AI</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 bg-brass" />Qualified</span>
+        <button className="link-stat inline-flex items-center gap-1.5" onClick={() => onSeries("inhours")}><span className="h-2.5 w-2.5 rounded-sm bg-[#f2ebe0]/25" />In studio hours</button>
+        <button className="link-stat inline-flex items-center gap-1.5" onClick={() => onSeries("after")}><span className="h-2.5 w-2.5 rounded-sm bg-brand" />After hours — answered by AI</button>
+        <button className="link-stat inline-flex items-center gap-1.5" onClick={() => onSeries("QUALIFIED")}><span className="h-0.5 w-4 bg-brass" />Qualified</button>
       </div>
     </div>
   );
