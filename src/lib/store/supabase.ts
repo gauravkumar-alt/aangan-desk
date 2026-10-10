@@ -20,63 +20,63 @@ export class SupabaseStore implements Store {
   }
 
   async listEnquiries() {
-    const rows = SupabaseStore.check(await this.db.from("enquiries").select("data").order("created_at", { ascending: false }).limit(5000));
+    const rows = SupabaseStore.check(await this.db.from("aangan_enquiries").select("data").order("created_at", { ascending: false }).limit(5000));
     return (rows ?? []).map((r: { data: Enquiry }) => r.data);
   }
   async getEnquiry(id: string) {
-    const r = SupabaseStore.check(await this.db.from("enquiries").select("data").eq("id", id).maybeSingle());
+    const r = SupabaseStore.check(await this.db.from("aangan_enquiries").select("data").eq("id", id).maybeSingle());
     return (r as { data: Enquiry } | null)?.data ?? null;
   }
   async findByVaaniCallId(callId: string) {
-    const r = SupabaseStore.check(await this.db.from("enquiries").select("data").eq("vaani_call_id", callId).maybeSingle());
+    const r = SupabaseStore.check(await this.db.from("aangan_enquiries").select("data").eq("vaani_call_id", callId).maybeSingle());
     return (r as { data: Enquiry } | null)?.data ?? null;
   }
   async findRecentByPhone(phone: string, sinceIso: string) {
-    const rows = SupabaseStore.check(await this.db.from("enquiries").select("data").eq("phone", phone).gte("created_at", sinceIso));
+    const rows = SupabaseStore.check(await this.db.from("aangan_enquiries").select("data").eq("phone", phone).gte("created_at", sinceIso));
     return (rows ?? []).map((r: { data: Enquiry }) => r.data);
   }
   async saveEnquiry(e: Enquiry) {
     SupabaseStore.check(
-      await this.db.from("enquiries").upsert({ id: e.id, vaani_call_id: e.vaaniCallId, phone: e.phone, created_at: e.createdAt, source: e.source, data: e }),
+      await this.db.from("aangan_enquiries").upsert({ id: e.id, vaani_call_id: e.vaaniCallId, phone: e.phone, created_at: e.createdAt, source: e.source, data: e }),
     );
   }
   async deleteEnquiries(filter: (e: Enquiry) => boolean) {
     const all = await this.listEnquiries();
     const ids = all.filter(filter).map((e) => e.id);
-    if (ids.length) SupabaseStore.check(await this.db.from("enquiries").delete().in("id", ids));
+    if (ids.length) SupabaseStore.check(await this.db.from("aangan_enquiries").delete().in("id", ids));
     return ids.length;
   }
   async claimEvent(rec: WebhookEventRecord) {
     // Primary key on `key` makes this atomic across instances: a retried delivery inserts nothing.
     const inserted = SupabaseStore.check(
-      await this.db.from("webhook_events").upsert({ key: rec.key, status: rec.status, received_at: rec.receivedAt, data: rec }, { onConflict: "key", ignoreDuplicates: true }).select("key"),
+      await this.db.from("aangan_webhook_events").upsert({ key: rec.key, status: rec.status, received_at: rec.receivedAt, data: rec }, { onConflict: "key", ignoreDuplicates: true }).select("key"),
     );
     if (inserted && inserted.length) return { claimed: true, existing: null };
-    const ex = SupabaseStore.check(await this.db.from("webhook_events").select("data").eq("key", rec.key).maybeSingle()) as { data: WebhookEventRecord } | null;
+    const ex = SupabaseStore.check(await this.db.from("aangan_webhook_events").select("data").eq("key", rec.key).maybeSingle()) as { data: WebhookEventRecord } | null;
     if (ex?.data.status === "failed") {
       // A previously failed event may be reprocessed — claim it by flipping status only if still failed.
       const flipped = SupabaseStore.check(
-        await this.db.from("webhook_events").update({ status: "processing", data: { ...rec, attempts: ex.data.attempts + 1 } }).eq("key", rec.key).eq("status", "failed").select("key"),
+        await this.db.from("aangan_webhook_events").update({ status: "processing", data: { ...rec, attempts: ex.data.attempts + 1 } }).eq("key", rec.key).eq("status", "failed").select("key"),
       );
       if (flipped && flipped.length) return { claimed: true, existing: ex.data };
     }
     return { claimed: false, existing: ex?.data ?? null };
   }
   async updateEvent(key: string, patch: Partial<WebhookEventRecord>) {
-    const ex = SupabaseStore.check(await this.db.from("webhook_events").select("data").eq("key", key).maybeSingle()) as { data: WebhookEventRecord } | null;
+    const ex = SupabaseStore.check(await this.db.from("aangan_webhook_events").select("data").eq("key", key).maybeSingle()) as { data: WebhookEventRecord } | null;
     if (!ex) return;
     const data = { ...ex.data, ...patch };
-    SupabaseStore.check(await this.db.from("webhook_events").update({ status: data.status, data }).eq("key", key));
+    SupabaseStore.check(await this.db.from("aangan_webhook_events").update({ status: data.status, data }).eq("key", key));
   }
   async listEvents(limit: number) {
-    const rows = SupabaseStore.check(await this.db.from("webhook_events").select("data").order("received_at", { ascending: false }).limit(limit));
+    const rows = SupabaseStore.check(await this.db.from("aangan_webhook_events").select("data").order("received_at", { ascending: false }).limit(limit));
     return (rows ?? []).map((r: { data: WebhookEventRecord }) => r.data);
   }
   async getSettings() {
-    const r = SupabaseStore.check(await this.db.from("settings").select("data").eq("id", 1).maybeSingle()) as { data: Settings } | null;
+    const r = SupabaseStore.check(await this.db.from("aangan_settings").select("data").eq("id", 1).maybeSingle()) as { data: Settings } | null;
     return { ...DEFAULT_SETTINGS, ...(r?.data ?? {}), rateLabel: DEFAULT_SETTINGS.rateLabel };
   }
   async saveSettings(s: Settings) {
-    SupabaseStore.check(await this.db.from("settings").upsert({ id: 1, data: s }));
+    SupabaseStore.check(await this.db.from("aangan_settings").upsert({ id: 1, data: s }));
   }
 }
