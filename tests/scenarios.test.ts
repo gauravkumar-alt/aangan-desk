@@ -495,3 +495,34 @@ describe("VaaniVoice auto-generated entity names", () => {
     expect(facts.propertyType).toBe("3BHK apartment");
   });
 });
+
+describe("real VaaniVoice payload shapes (observed 10 Oct 2026)", () => {
+  it("reads nested data, duration in seconds, ISO due date — and flags the 7-week deadline", async () => {
+    process.env.VAANI_PROVIDER = "vaanivoice";
+    const { handleVaaniVoiceWebhook } = await import("../src/lib/vaani/vaanivoice");
+    const send = async (b: unknown) => {
+      const o = await handleVaaniVoiceWebhook(JSON.stringify(b), "demo-token-local-only", "http://localhost:0");
+      if (o.followUp) await o.followUp();
+      return o;
+    };
+    const room = `outbound-${Date.now()}-abcd1234`;
+    const hdr = { to: "+919900000001", from: "+918035315360" };
+    await send({ event: "call_started", timestamp: "2026-10-10T11:52:12.357451+00:00", ...hdr, data: { room_name: room, phone_number: "+919900000001", call_type: "Outbound", agent_name: "x" } });
+    await send({ event: "user_picked_up_at", timestamp: "2026-10-10T11:52:34.392781+00:00", ...hdr, data: { room_name: room, phone_number: "+919900000001", picked_up_at: "2026-10-10T11:52:34.389017" } });
+    await send({ event: "call_ended", timestamp: "2026-10-10T11:55:57.682325+00:00", ...hdr, data: { room_name: room, end_reason: "Call ended", call_duration: 202.791446, technical_issue: false } });
+    const out = await send({
+      event: "call_postprocessing", call_id: room, timestamp: "2026-10-10T11:56:41Z",
+      data: { room_name: room, call_id: room, call_duration: 202.79, end_reason: "Call ended", summary: "s", dispositions: {}, recording_url: null,
+        transcript: "[11:52:40] AGENT: Hello, Aangan Studio.\n[11:52:45] USER: Hi, I'm looking to design my house.",
+        entities: { name: "Gaurav", project_type: "home", locality: "Hinjewadi", rooms_or_whole_home: "whole home", carpet_area: "1,500", own_or_rented: "owner-occupied", project_due_date: "2026-11-30", callback_number: null, budget: null, decision_maker: "yes", intent: "new_project", exploring: false, call_ended_early: false } },
+    });
+    const e = await lib.store.getStore().getEnquiry((out.body as { enquiryId: string }).enquiryId);
+    expect(e?.phone).toBe("+919900000001");
+    expect(e?.callDurationSeconds).toBe(203);
+    expect(e?.aiCost).toBeGreaterThan(0);
+    expect(e?.answerDelaySec).toBe(22);
+    expect(e?.timelineDeadline).toBe("2026-11-30");
+    expect(e?.qualificationStatus).toBe("NEEDS_REVIEW"); // ~7 weeks: above the 6-week minimum, under design + execution
+    process.env.VAANI_PROVIDER = "vaaniyantra";
+  });
+});

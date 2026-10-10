@@ -84,6 +84,14 @@ export function factsFromCollectedData(cd: Record<string, unknown>, now: Date) {
         break;
       }
       case "timeline": {
+        const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(str.trim());
+        if (iso) {
+          // "2026-11-30" → a real deadline the timeline rule can check
+          const d = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3]));
+          facts.timeline = `Done by ${d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })}`;
+          facts.timelineDeadline = d.toISOString().slice(0, 10);
+          break;
+        }
         const t = parseTimeline(str, now);
         facts.timeline = t?.timeline ?? str;
         if (t?.timelineDeadline) facts.timelineDeadline = t.timelineDeadline;
@@ -164,7 +172,7 @@ export function slotFromAgentText(text: string): Slot {
   if (/budget/.test(t)) return "budget";
   if (/landlord/.test(t)) return "landlord";
   if (/your own home|are you renting|are you the owner|own it or rent/.test(t)) return "ownership";
-  if (/later start/.test(t)) return "laterStart";
+  if (/later (start|completion|date)|slightly later|later finish/.test(t)) return "laterStart";
   if (/decision|come to the consultation/.test(t)) return "decisionMaker";
   if (/when|timeline|operational/.test(t)) return "timeline";
   if (/whole home|particular rooms|workstations|what do you need/.test(t)) return "spaces";

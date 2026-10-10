@@ -174,7 +174,13 @@ export function parseTimeline(t: string, now: Date): Partial<EnquiryFacts> | nul
     return out;
   }
 
-  if (month) {
+  const rel_month = /\b(?:by |within |before )?(?:the )?(?:end of )?(this|next) month\b/.exec(low);
+  if (rel_month && !month && !possession) {
+    const add = rel_month[1] === "next" ? 2 : 1;
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + add, 0)); // last day of that month
+    out.timeline = `Done by the end of ${rel_month[1]} month`;
+    out.timelineDeadline = d.toISOString().slice(0, 10);
+  } else if (month) {
     const label = MONTHS.find((m) => m.startsWith(month[1].toLowerCase().slice(0, 3)))!;
     const d = resolveMonth(month[1], now, yearHint);
     const pretty = `${label[0].toUpperCase()}${label.slice(1)} ${d.getUTCFullYear()}`;

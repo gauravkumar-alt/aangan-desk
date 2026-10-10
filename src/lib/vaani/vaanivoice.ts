@@ -103,17 +103,28 @@ export async function handleVaaniVoiceWebhook(raw: string, token: string | null,
 async function lifecycle(room: string) {
   const evs = (await getStore().listEvents(2000)).filter((e) => e.callId === room && e.event.startsWith("vv."));
   const find = (name: string) => evs.find((e) => e.event === `vv.${name}`);
-  const parse = (e?: WebhookEventRecord) => (e ? (JSON.parse(e.rawBody) as Body) : null);
-  return { started: find("call_started"), picked: find("user_picked_up_at"), ended: find("call_ended"), startedBody: parse(find("call_started")), endedBody: parse(find("call_ended")) };
+  // Docs put fields at the top level; real payloads nest them under `data`. Accept both.
+  const parse = (e?: WebhookEventRecord) => {
+    if (!e) return null;
+    const b = JSON.parse(e.rawBody) as Body;
+    return { ...b, ...((b.data ?? {}) as Record<string, unknown>) } as Body;
+  };
+  const at = (e?: WebhookEventRecord) => {
+    const t = e ? (JSON.parse(e.rawBody) as Body).timestamp : undefined;
+    return t && !isNaN(Date.parse(t)) ? new Date(t).toISOString() : e?.receivedAt ?? null;
+  };
+  return { startedAt: at(find("call_started")), pickedAt: at(find("user_picked_up_at")), endedAt: at(find("call_ended")), startedBody: parse(find("call_started")), endedBody: parse(find("call_ended")) };
 }
 
 async function callInputFromPostprocessing(b: Body, data: Record<string, unknown>, room: string, callId: string, now: string): Promise<CallInput> {
   const lc = await lifecycle(room);
-  const ms = typeof data.call_duration === "number" ? data.call_duration : null;
-  const durationSec = typeof lc.endedBody?.call_duration === "number" ? lc.endedBody.call_duration : ms != null ? ms / 1000 : 0;
+  // Docs say ms; real payloads send seconds (e.g. 202.79). Values above ~3h are treated as ms.
+  const raw = typeof lc.endedBody?.call_duration === "number" ? lc.endedBody.call_duration : typeof data.call_duration === "number" ? data.call_duration : null;
+  const fromTimes = lc.pickedAt && lc.endedAt ? (Date.parse(lc.endedAt) - Date.parse(lc.pickedAt)) / 1000 : 0;
+  const durationSec = raw == null ? Math.max(0, fromTimes) : raw > 10_800 ? raw / 1000 : raw;
   const transcript = parseTranscript(data.transcript);
   const entities = data.entities && typeof data.entities === "object" ? (data.entities as Record<string, unknown>) : null;
-  const createdAt = lc.started?.receivedAt ?? new Date(Date.parse(b.timestamp ?? now) - durationSec * 1000).toISOString();
+  const createdAt = lc.startedAt ?? new Date(Date.parse(b.timestamp ?? now) - durationSec * 1000).toISOString();
   const endReason = String(data.end_reason ?? lc.endedBody?.end_reason ?? "");
   const dispositions = data.dispositions && typeof data.dispositions === "object" ? JSON.stringify(data.dispositions) : "";
   const early = entities?.call_ended_early === true || String(entities?.call_ended_early).toLowerCase() === "true";
@@ -122,8 +133,8 @@ async function callInputFromPostprocessing(b: Body, data: Record<string, unknown
     vaaniCallId: callId,
     phone: (lc.startedBody?.phone_number as string | undefined) ?? (["caller_phone", "callback_number", "phone"].map((k) => entities?.[k]).find((v): v is string => typeof v === "string" && /\d{8,}/.test(v.replace(/\D/g, "")))?.replace(/[^\d+]/g, "") ?? null),
     createdAt,
-    answeredAt: lc.picked?.receivedAt ?? lc.started?.receivedAt ?? null,
-    endedAt: lc.ended?.receivedAt ?? b.timestamp ?? now,
+    answeredAt: lc.pickedAt ?? lc.startedAt ?? null,
+    endedAt: lc.endedAt ?? b.timestamp ?? now,
     durationSec,
     status: early ? "hung_up_early" : "completed",
     transcript,
