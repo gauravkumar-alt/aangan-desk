@@ -301,7 +301,7 @@ export function CallSimulator({ rules, demo }: { rules: Ruleset; demo: boolean }
         {/* Phone */}
         <section className="space-y-4">
           <div className="card flex h-[640px] flex-col overflow-hidden">
-            <div className="border-b border-line bg-ink px-4 py-3 text-white">
+            <div className="border-b border-line bg-surface px-4 py-3 text-ink">
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[11px] uppercase tracking-wide opacity-60">{phase === "idle" ? "Ready" : phase === "ringing" ? "Ringing…" : phase === "live" ? "On call" : phase === "posting" ? "Saving…" : "Call ended"}</div>
@@ -333,12 +333,12 @@ export function CallSimulator({ rules, demo }: { rules: Ruleset; demo: boolean }
               )}
               {dlg?.turns.map((t, i) => (
                 <div key={i} className={cls("fade-in flex", t.role === "AGENT" ? "justify-start" : "justify-end")}>
-                  <div className={cls("max-w-[88%] rounded-2xl px-3 py-2 text-[13px]", t.role === "AGENT" ? "border border-line bg-surface" : "bg-ink text-white")}>{t.text}</div>
+                  <div className={cls("max-w-[88%] rounded-2xl px-3 py-2 text-[13px]", t.role === "AGENT" ? "border border-line bg-surface" : "bg-ink text-paper")}>{t.text}</div>
                 </div>
               ))}
               {interim && (
                 <div className="flex justify-end">
-                  <div className="max-w-[88%] rounded-2xl bg-ink/60 px-3 py-2 text-[13px] text-white italic">{interim}…</div>
+                  <div className="max-w-[88%] rounded-2xl bg-ink/40 px-3 py-2 text-[13px] text-paper italic">{interim}…</div>
                 </div>
               )}
             </div>
@@ -491,7 +491,7 @@ export function CallSimulator({ rules, demo }: { rules: Ruleset; demo: boolean }
 function Step({ ok, warn, title, children }: { ok: boolean; warn?: boolean; title: string; children?: React.ReactNode }) {
   return (
     <li className="flex gap-2">
-      <span className={cls("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] text-white", warn ? "bg-warn" : ok ? "bg-ok" : "bg-bad")}>{warn ? "!" : ok ? "✓" : "×"}</span>
+      <span className={cls("mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full text-[10px] text-paper", warn ? "bg-warn" : ok ? "bg-ok" : "bg-bad")}>{warn ? "!" : ok ? "✓" : "×"}</span>
       <div>
         <div className="font-semibold">{title}</div>
         {children && <div className="text-ink-2">{children}</div>}

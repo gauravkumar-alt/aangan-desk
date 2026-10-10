@@ -53,7 +53,7 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
   ];
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-ink/25" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <aside className="fade-in flex h-full w-full max-w-[720px] flex-col overflow-hidden bg-paper shadow-2xl" onClick={(ev) => ev.stopPropagation()}>
         <div className="border-b border-line bg-surface px-5 py-4">
           <div className="flex items-start gap-3">
@@ -199,11 +199,11 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
           {tab === "handoff" &&
             (e.handoff.note ? (
               <div className="space-y-3">
-                <div className="rounded-xl bg-[#e7ebf0] p-3">
-                  <div className="mb-1 text-[11px] font-semibold text-[#527da3]">
+                <div className="rounded-xl bg-[#1d2430] p-3">
+                  <div className="mb-1 text-[11px] font-semibold text-info">
                     {e.handoff.status === "SENT" ? `Delivered via ${channelName(e.handoff.channel)} · ${e.handoff.sentAt ? fmtTime(e.handoff.sentAt) : ""}` : "Not delivered yet — shown as it will be sent"}
                   </div>
-                  <div className="rounded-lg bg-white p-3 text-[13px] leading-relaxed shadow-sm">
+                  <div className="rounded-lg bg-surface p-3 text-[13px] leading-relaxed ring-1 ring-line">
                     <div className="mb-2 font-bold">{e.handoff.note.title}</div>
                     {e.handoff.note.lines.map((l) => (
                       <div key={l.label}>
@@ -217,7 +217,7 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
                     <div className="mt-2">
                       <b>Recommended next step:</b> {e.handoff.note.nextStep}
                     </div>
-                    {calLink && <div className="mt-2 text-[#2481cc]">📅 Book the consultation</div>}
+                    {calLink && <div className="mt-2 text-info">📅 Book the consultation</div>}
                   </div>
                 </div>
                 {e.handoff.attempts.length > 0 && (
@@ -286,7 +286,7 @@ export function EnquiryDrawer({ e, all, onClose, onChanged, onOpen, calendlyUrl 
             <div className="space-y-2">
               {e.transcript.map((t, i) => (
                 <div key={i} className={cls("flex", t.role === "AGENT" ? "justify-start" : "justify-end")}>
-                  <div className={cls("max-w-[85%] rounded-2xl px-3 py-2 text-[13px]", t.role === "AGENT" ? "bg-surface border border-line" : "bg-ink text-white")}>
+                  <div className={cls("max-w-[85%] rounded-2xl px-3 py-2 text-[13px]", t.role === "AGENT" ? "bg-surface border border-line" : "bg-ink text-paper")}>
                     <div className="mb-0.5 text-[10px] font-bold uppercase opacity-60">{t.role === "AGENT" ? (e.source === "replay" ? "Front desk (Sep 2026)" : "AI front desk") : "Caller"}</div>
                     {t.text}
                   </div>

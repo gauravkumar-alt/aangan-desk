@@ -29,7 +29,7 @@ export function SettingsPanel({ data, onClose, onChanged }: { data: DashboardDat
   const it = data.integrations;
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end bg-ink/25" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex justify-end bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <aside className="fade-in h-full w-full max-w-[460px] space-y-5 overflow-y-auto bg-paper p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h2 className="text-[18px] font-bold">Settings</h2>
