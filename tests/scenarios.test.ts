@@ -526,3 +526,30 @@ describe("real VaaniVoice payload shapes (observed 10 Oct 2026)", () => {
     process.env.VAANI_PROVIDER = "vaaniyantra";
   });
 });
+
+describe("off-topic and prank questions", () => {
+  it("answers lightly, doesn't opine, steers back — and the enquiry still completes", async () => {
+    const conv = talk([
+      "Why is Donald Trump not coming to my place?",
+      "Ok fine. I have a 2BHK in Baner, whole home.",
+      "What's the weather like today?",
+      "Meena.",
+      "About 900 square feet.",
+      "Yes, we own it.",
+      "By May next year.",
+      "Yes.",
+    ]);
+    expect(conv.replies[0]).toMatch(/can't help with that|outside my area|wish I knew/i);
+    expect(conv.replies[0]).toMatch(/home or office/);
+    expect(conv.replies[0]).not.toMatch(/trump|president|politic/i);
+    expect(conv.replies[2]).toMatch(/can't help with that|outside my area|wish I knew/i);
+    expect(conv.replies[2]).toMatch(/square feet|name|speaking with/i); // goes straight back to the question it needed
+    const { enquiry } = await deliver(conv);
+    expect(enquiry?.qualificationStatus).toBe("QUALIFIED");
+  });
+  it("ends politely after repeated detours with no project, or on abuse", () => {
+    const conv = talk(["Who will win the cricket match?", "Is the moon made of cheese?", "Why is the sky blue?"]);
+    expect(conv.state.phase).toBe("ended");
+    expect(conv.replies.at(-1)).toMatch(/Goodbye!$/);
+  });
+});

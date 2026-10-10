@@ -37,6 +37,8 @@ export interface Extraction {
   no: boolean;
   goodbye: boolean;
   mentionsPriorContact: boolean; // "I called on Monday, nobody got back" (T16)
+  offTopic: boolean; // a question with nothing to do with interiors ("why isn't Trump coming to my place?")
+  abusive: boolean;
   phoneMentioned: string | null;
 }
 
@@ -540,7 +542,17 @@ export function extract(text: string, ctx: { lastAsked: Slot; now: Date }): Extr
   const ph = /(\+?\d[\d\s-]{8,}\d)/.exec(t);
   const phoneMentioned = ph ? ph[1].replace(/[\s-]/g, "") : null;
 
-  return { facts, unknown, declined, isCorrection, asksPrice, asksHuman, questions, yes, no, goodbye, mentionsPriorContact, phoneMentioned };
+  // Off-topic: a question, nothing project-related extracted, not one of the questions we answer.
+  const isQuestion = /\?\s*$/.test(t) || /^(why|what|who|how|when|where|is|are|can|could|will|would|do|does|tell me)\b/.test(low);
+  // "my place"/"my home" alone doesn't make it a project question ("why isn't Trump coming to my place?")
+  const projectish = /(interior|design|bhk|flat|apartment|villa|office|clinic|kitchen|bedroom|living room|wardrobe|aangan|consultation|designer|project|renovat|redo|sq ?ft|square feet|price|cost|budget)/.test(low);
+  const weakOnly = Object.keys(facts).every((k) => ["projectType", "propertyType", "callerName"].includes(k));
+  const introducing = Boolean(facts.callerName) || /\b(this is|i am|i'm|my name)\b/.test(low);
+  const offTopic = isQuestion && !introducing && !projectish && weakOnly && !asksPrice && !asksHuman && !questions.length;
+  if (offTopic) for (const k of Object.keys(facts)) delete (facts as Record<string, unknown>)[k];
+  const abusive = /\b(fuck|shit|bitch|bastard|idiot|stupid|chutiya|madarchod|bhenchod)\b/.test(low);
+
+  return { facts, unknown, declined, isCorrection, asksPrice, asksHuman, questions, yes, no, goodbye, mentionsPriorContact, phoneMentioned, offTopic, abusive };
 }
 
 export const fmtSqFt = (n: number) => `${fmtInt(n)} sq ft`;

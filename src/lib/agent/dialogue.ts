@@ -29,6 +29,7 @@ export interface DialogueState {
   priceAsked: number;
   humanAsks: number;
   retries: string[]; // questions re-asked once after an answer we couldn't make out
+  offTopicCount: number;
   repeatCaller: boolean;
   altPhone: string | null;
   phase: "talking" | "wrapping" | "ended";
@@ -58,6 +59,7 @@ export function startDialogue(now: Date, rules: Ruleset): { state: DialogueState
       priceAsked: 0,
       humanAsks: 0,
       retries: [],
+      offTopicCount: 0,
       repeatCaller: false,
       altPhone: null,
       phase: "talking",
@@ -309,6 +311,27 @@ export function step(prev: DialogueState, callerText: string, rules: Ruleset, no
       return say(`Of course. I'll have someone from the studio call you back${open ? " shortly" : " when we open at 10am"}. ${bye}`, true);
     }
     lead.push(`Of course — I'll make sure someone from the studio calls you${open ? "" : " when we open at 10am"}. Let me take a few details first so they don't have to ask you again.`);
+  }
+
+  // ── off-topic / prank questions: one light line, then back to the enquiry (end after repeated detours) ──
+  if (ext.abusive || ext.offTopic) {
+    s.offTopicCount++;
+    if (asked) s.asked = s.asked.filter((x) => x !== asked); // their answer is still owed — ask again
+    const hasProject = Boolean(f.projectType || f.location || f.spaces.length || f.scope);
+    if (ext.abusive || (s.offTopicCount > 2 && !hasProject)) {
+      s.endReason = "caller_left";
+      return say(`I'll end the call here — if you'd like help with an interior design project, please call us any time. Goodbye!`, true);
+    }
+    const quip = pick(
+      ["Ha, I'm afraid I can't help with that one — I only handle Aangan's interior design enquiries!", "That's a bit outside my area, I'm afraid — I'm just Aangan Studio's virtual assistant for interior design.", "I wish I knew! I only look after interior design enquiries for Aangan Studio."],
+      s.offTopicCount,
+    );
+    const back = plan(f).find((slot) => !have(s, slot));
+    if (back) {
+      s.lastAsked = back;
+      return say(`${quip} ${hasProject ? question(back, s, rules, s.turns.length) : "Is there a home or office you're planning to do up?"}`);
+    }
+    return say(`${quip} ${wrapUp(s, rules, now)}`, s.phase === "ended");
   }
 
   // ── inform ──
